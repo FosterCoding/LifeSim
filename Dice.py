@@ -1,5 +1,6 @@
 import random
 from typing import Dict, Any
+from Player import Player
 
 #Convert 0-100 Stats into a dice roll modifier
 def stat_to_modifier(stat):
@@ -15,7 +16,7 @@ def roll_2d20(stat: int, e_modifier: int = 0):
     return roll + modifier + e_modifier
 
 #Resolve the stat check by rolling 2d20 and comparing it to the target Difficulty Class (DC)
-def resolve_check(stat: int, dc_input):
+def resolve_check(stat: int, dc_input, e_modifier: int = 0):
     # If the AI (or you) passed a string like "med_risk", translate it to the number
     if isinstance(dc_input, str):
         if dc_input not in difficulty_classes:
@@ -23,7 +24,9 @@ def resolve_check(stat: int, dc_input):
         dc = difficulty_classes[dc_input]
     else:
         dc = dc_input  # If they passed a raw integer, just use it directly
-    roll = roll_2d20(stat)
+
+    
+    roll = roll_2d20(stat, e_modifier)
     #Rolls should be rewarded for being above the DC, with a great success being 5 or more above the DC, a standard success being equal to or above the DC, a partial success being within 3 below the DC, and a fail being below the DC.
     if roll >= dc + 5:
         outcome = "great_success"

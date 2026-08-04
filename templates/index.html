@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeSim Game</title>
+    <style>
+        /* Base Dark Mode Styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar & Stats Button */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .stats-btn {
+            background-color: transparent;
+            color: #ffffff;
+            border: 1px solid #ffffff;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .stats-btn:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        /* Story Display Container */
+        #story-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .narrative-block {
+            margin-bottom: 15px;
+        }
+
+        .user-action-block {
+            color: #aaaaaa;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        /* Action Controls Area */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            background-color: #000000;
+            color: #ffffff;
+            border: 1px solid #444;
+            padding: 12px;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .choice-btn:hover {
+            border-color: #ffffff;
+            background-color: #111111;
+        }
+
+        /* Custom Input Prompt Box */
+        .custom-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background-color: #000000;
+            color: #ffffff;
+            border: 1px solid #444;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #ffffff;
+        }
+
+        .submit-btn {
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #ffffff;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        /* Modal Popup for Character Stats */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #000000;
+            border: 1px solid #ffffff;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            float: right;
+            cursor: pointer;
+            font-size: 1rem;
+            border: 1px solid #ffffff;
+            background: none;
+            color: #ffffff;
+            padding: 2px 8px;
+        }
+
+        .close-modal:hover {
+            background-color: #ffffff;
+            color: #000000;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <div class="header">
+        <h1>LifeSim</h1>
+        <button class="stats-btn" onclick="openStats()">Show Stats</button>
+    </div>
+
+    <!-- Main Narrative Output Window -->
+    <div id="story-container">
+        <div class="narrative-block">Starting game engine...</div>
+    </div>
+
+    <!-- User Controls Area -->
+    <div class="controls">
+        <!-- Preset Choice Buttons -->
+        <div id="choices-container" class="choices-container"></div>
+
+        <!-- Custom Action Input -->
+        <div class="custom-input-group">
+            <input type="text" id="custom-action" placeholder="Type a custom action..." onkeydown="handleKeyPress(event)">
+            <button class="submit-btn" onclick="sendCustomAction()">Send</button>
+        </div>
+    </div>
+
+    <!-- Stats Modal Box -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeStats()">X</button>
+            <h2>Character Sheet</h2>
+            <hr style="border-color: #333; margin: 10px 0;">
+            <pre id="stats-display">Loading stats...</pre>
+        </div>
+    </div>
+
+    <script>
+        window.onload = () => {
+            startNewGame();
+        };
+
+        async function startNewGame() {
+            try {
+                const response = await fetch('/api/new-game', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const data = await response.json();
+
+                if (data.narration) {
+                    if (data.narration.narrative) {
+                        updateStory(data.narration.narrative);
+                    }
+                    if (data.narration.choices) {
+                        renderChoices(data.narration.choices);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to start new game:", err);
+                updateStory("Error initializing game engine.");
+            }
+        }
+
+        async function sendAction(actionText) {
+            if (!actionText.trim()) return;
+
+            // Clear active choice buttons while processing
+            renderChoices([]);
+            appendStory(`> ${actionText}`, true);
+
+            try {
+                const response = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: actionText })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    appendStory(`[Error: ${data.error}]`);
+                    return;
+                }
+
+                if (data.narration) {
+                    if (data.narration.narrative) {
+                        appendStory(data.narration.narrative);
+                    }
+                    if (data.narration.choices) {
+                        renderChoices(data.narration.choices);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to perform action:", err);
+                appendStory("[Connection error. Please try again.]");
+            }
+        }
+
+        function sendCustomAction() {
+            const input = document.getElementById('custom-action');
+            const actionText = input.value;
+            if (actionText.trim()) {
+                sendAction(actionText);
+                input.value = '';
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendCustomAction();
+            }
+        }
+
+        function updateStory(text) {
+            const container = document.getElementById('story-container');
+            container.innerHTML = `<div class="narrative-block">${text}</div>`;
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendStory(text, isUserAction = false) {
+            const container = document.getElementById('story-container');
+            const newBlock = document.createElement('div');
+            newBlock.className = isUserAction ? 'user-action-block' : 'narrative-block';
+            newBlock.textContent = text;
+            container.appendChild(newBlock);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderChoices(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+
+            if (choices && choices.length > 0) {
+                choices.forEach((choice) => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-btn';
+                    button.textContent = choice;
+                    button.onclick = () => sendAction(choice);
+                    container.appendChild(button);
+                });
+            }
+        }
+
+        // Fetch and format stats for Modal Display
+        async function openStats() {
+            const modal = document.getElementById('stats-modal');
+            const statsDisplay = document.getElementById('stats-display');
+            modal.style.display = 'flex';
+
+            try {
+                const response = await fetch('/api/state');
+                const data = await response.json();
+
+                if (data.error) {
+                    statsDisplay.textContent = "No active character session found.";
+                    return;
+                }
+
+                // Format player stats cleanly
+                let output = `${data.header || "Character Overview"}\n`;
+                output += `Occupation: ${data.occupation || "N/A"}\n`;
+                output += `Background: ${data.background || "N/A"}\n\n`;
+                
+                output += `--- CORE STATS ---\n`;
+                if (data.stats) {
+                    for (const [stat, val] of Object.entries(data.stats)) {
+                        output += `${stat.toUpperCase().padEnd(14)}: ${val}\n`;
+                    }
+                }
+
+                output += `\n--- FINANCES ---\n`;
+                output += `Cash          : $${data.cash ?? 0}\n`;
+                output += `Debt          : $${data.debt ?? 0}\n`;
+
+                if (data.inventory && data.inventory.length > 0) {
+                    output += `\n--- INVENTORY ---\n${data.inventory.join(', ')}\n`;
+                }
+
+                if (data.status_flags && data.status_flags.length > 0) {
+                    output += `\n--- STATUS FLAGS ---\n${data.status_flags.join(', ')}\n`;
+                }
+
+                statsDisplay.textContent = output;
+            } catch (err) {
+                statsDisplay.textContent = "Unable to fetch state.";
+            }
+        }
+
+        function closeStats() {
+            document.getElementById('stats-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

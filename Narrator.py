@@ -17,7 +17,7 @@ MODEL_NAME = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat")
 http_client = httpx.Client(trust_env=False)
 
 client = OpenAI(
-    api_key=API_KEY,
+    api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1",
     http_client=http_client
 )

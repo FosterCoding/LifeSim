@@ -1,9 +1,8 @@
-#Flask
 import os
 import uuid
 from flask import Flask, jsonify, render_template, request, session
 
-# Import core game engine modules without touching them
+# Import core game engine modules
 from Dice import resolve_check
 from Player import Player
 from Narrator import interpret_action, narrate_outcome
@@ -41,12 +40,12 @@ def new_game():
         month=data.get("month", "Jan"),
         year=int(data.get("year", 2026)),
         location=data.get("location", "New York, USA"),
-        health=int(data.get("health", 70)),
-        strength=int(data.get("strength", 50)),
-        charisma=int(data.get("charisma", 50)),
-        intelligence=int(data.get("intelligence", 50)),
-        willpower=int(data.get("willpower", 50)),
-        stress=int(data.get("stress", 30)),
+        health=int(data.get("health", 10)),
+        strength=int(data.get("strength", 10)),
+        charisma=int(data.get("charisma", 10)),
+        intelligence=int(data.get("intelligence", 10)),
+        willpower=int(data.get("willpower", 10)),
+        stress=int(data.get("stress", 0)),
         cash=float(data.get("cash", 1000.0)),
         occupation=data.get("occupation", "Unemployed"),
         background=data.get("background", "Looking for a fresh start."),
@@ -84,7 +83,7 @@ def new_game():
 
 @app.route("/api/action", methods=["POST"])
 def perform_action():
-    """Processes a turn: interprets user input, resolves dice math, and narrate results."""
+    """Processes a turn: interprets user input, resolves dice math, and narrates results."""
     player = get_current_player()
     if not player:
         return jsonify({"error": "No active game session found. Please start a new game."}), 400
@@ -138,18 +137,10 @@ def perform_action():
             "state_deltas": {},
         }
 
-    # 5. Apply state changes returned in narration state_deltas to Player instance
+    # 5. Apply state changes using Player's built-in delta engine
     deltas = narration.get("state_deltas", {})
     if isinstance(deltas, dict):
-        for key, value in deltas.items():
-            if hasattr(player, key):
-                current_val = getattr(player, key)
-                if isinstance(current_val, (int, float)) and isinstance(value, (int, float)):
-                    setattr(player, key, current_val + value)
-                elif isinstance(current_val, list) and isinstance(value, list):
-                    setattr(player, key, current_val + value)
-                elif isinstance(current_val, dict) and isinstance(value, dict):
-                    current_val.update(value)
+        player.apply_deltas(deltas)
 
     return jsonify(
         {

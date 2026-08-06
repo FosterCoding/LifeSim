@@ -10,6 +10,9 @@ from Narrator import interpret_action, narrate_outcome
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "lifesim_secret_key_12345")
 
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False  # Set to True if using HTTPS
+
 # In-memory session store mapping session_id -> Player object instance
 game_sessions = {}
 

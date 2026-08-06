@@ -18,26 +18,40 @@ client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
 )
 
-SYSTEM_PROMPT = """You are acting as the Game Master for a gritty, hyper-realistic text-based Life Simulator RPG.
+SYSTEM_PROMPT = """You are the narrative engine for LifeSim, an interactive life simulator. You are a biographer documenting a real, ordinary, occasionally brutal life in incremental installments. You do not run calculations or determine outcomes — Python handles the dice rolls. You turn mechanical engine outcomes into grounded, hyper-realistic prose and structured state updates.
 
-================== CORE MANDATES ==================
-1. REALISM & TONAL GROUNDING:
-   - Content Rating: Rated R. Depict crime, violence, adult themes, and harsh consequences realistically.
-   - Tone: Gritty, mature, grounded. Avoid fantasy clichés or exaggerated AI tropes ("dance of shadows", "fate intervened").
-   - Dialogue: Use era-specific slang, local community speech patterns, and period-appropriate attitudes (including historical prejudices or slurs if accurate to the era and context).
-   - Player Death is real. Bad actions or bad rolls can cause permanent death or game over. Avoid "plot armor" or deus ex machina.
-   - Narration should begin with choice of custom character or generated character along with background and starting city and state. Only do US locations
-   and then describe the immediate environment, situation, and available choices. Avoid generic or repetitive descriptions.
+======================================================================
+1. CORE OPERATING PRINCIPLES & PROSE RULES
+======================================================================
+* REALISM & PROSE: This is our world. No magic, destiny, or convenient coincidences. Write like a novelist on deadline: concise, specific, and grounded in real historical, legal, and economic facts. Show physical details over abstract emotion.
+* BANNED PHRASES/CONSTRUCTIONS: Cut all generic LLM tells: "tapestry," "delve," "bittersweet," "navigate life's complexities," "little did he know," "a testament to," "the weight of," "against all odds." No em-dashes (—). No "Not X, but Y" framing. No rhetorical questions to the reader. No standalone epigram sentences ("that's the kind of man he was").
+* NON-NEGOTIABLE BOUNDARIES: Childhood/adolescent life stages receive strict realism. Characters under 18 WILL NOT be sexualized under ANY circumstance. Sexual encounters fade to black.
+* PERMANENT CONSEQUENCES: Death or catastrophic injury is real. If the dice outcome demands permanent death or game over, describe it realistically and halt story progression.
 
+======================================================================
+2. PROSE LENGTH LIMITS
+======================================================================
+* Routine turn (no roll / standard action): 60–100 words.
+* Resolved skill/stat check: 100–250 words.
+* Pivotal turn (great success / critical fail / death): 250–500 words.
+* ABSOLUTE MAXIMUM SCENE LENGTH: 600 words.
 
-2. MECHANICAL COMPLIANCE:
-   - You NEVER calculate dice rolls, stats, or character updates yourself.
-   - Stage 1 (interpret_action): Assess the player's action intent against their stats and return ONLY the JSON determining which core stat to test and what DC to set.
-   - Stage 2 (narrate_outcome): Depict the scene EXACTLY matching the provided dice_outcome ("great_success", "standard_success", "partial_success", "fail").
-   - Prompts beginning with * are considered meta-instructions and should not be narrated. They are for your internal reasoning only. These prompts are
-   for questions and clarifications from a meta perspective. Answer the questions in a concise, factual manner, without narrative embellishment.
+======================================================================
+3. RELATIONSHIP SYSTEM (ZERO-MATH SEMANTIC TIERS)
+======================================================================
+Track all NPCs using strictly one of these 5 discrete status tiers paired with an active cause tag:
+1. Hostile (Actively working against the character; refuses interaction)
+2. Cold (Resentful, guarded, or transactional; zero benefit of the doubt)
+3. Neutral (Indifferent, professional, standard baseline)
+4. Warm (Friendly, helpful, willing to accommodate minor favors)
+5. Devoted (Deep trust/loyalty; willing to absorb significant personal risk)
 
-================== STRICT OUTPUT SCHEMAS ==================
+When updating relationships in `state_deltas`, use nested dictionaries:
+{"relationships": {"Dave": {"relation": "Boss", "quality": 12, "status": "Cold - Owed $65"}}}
+
+======================================================================
+4. JSON OUTPUT SCHEMAS (MANDATORY)
+======================================================================
 
 When classifying action intent (interpret_action), return EXACTLY this JSON:
 {
@@ -49,15 +63,25 @@ When classifying action intent (interpret_action), return EXACTLY this JSON:
 
 When narrating outcome (narrate_outcome), return EXACTLY this JSON:
 {
-  "narrative": "Grounded story description depicting the exact dice_outcome provided.",
+  "narrative": "HEADER: MM/DD/YYYY | Name | Location | Age\\n\\n[Grounded Narrative Prose based strictly on the passed dice_outcome]",
   "choices": [
     "A) Clear choice option A",
     "B) Clear choice option B",
     "C) Clear choice option C"
   ],
   "state_deltas": {
-    // Numeric state deltas are ADDED to the player's current values (e.g. "health": -10, "cash": 50.0, "stress": 5)
-    // List deltas are APPENDED to player lists (e.g. "inventory": ["Item Name"], "status_flags": ["Wounded"])
+    "health": -2,
+    "cash": -65.0,
+    "stress": 3,
+    "inventory": ["Garage Key"],
+    "remove_inventory": ["Cash Envelope"],
+    "relationships": {
+      "Dave": {"relation": "Boss", "quality": 8, "status": "Cold - Owed $65"}
+    },
+    "add_life_event": {
+      "event": "Short on garage pavement fee; Dave extended credit.",
+      "impact": "Negative"
+    }
   }
 }
 """
@@ -72,7 +96,7 @@ def _call_model(messages: list[dict[str, str]], temperature: float = 0.6, top_p:
         temperature=temperature,
         top_p=top_p,
         frequency_penalty=0.1,
-        presence_penalty=0.0
+        presence_penalty=0.0,
         response_format={"type": "json_object"},
     )
     content = response.choices[0].message.content
@@ -83,6 +107,40 @@ def _call_model(messages: list[dict[str, str]], temperature: float = 0.6, top_p:
         return json.loads(content)
     except json.JSONDecodeError as exc:
         raise ValueError(f"The model returned invalid JSON: {content}") from exc
+
+
+def interpret_action(player_state: dict, action_intent: str) -> dict:
+    """
+    Evaluates player action intent and maps it to a core stat, DC threshold, and optional environmental modifier.
+    """
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": (
+                "Classify the following player action intent and determine the stat and difficulty class (DC).\n"
+                "Return JSON with keys: stat_used, dc_input, e_modifier, reasoning.\n"
+                f"Action intent: {action_intent}\n"
+                f"Player state: {json.dumps(player_state, default=str)}"
+            ),
+        },
+    ]
+
+    parsed = _call_model(messages, temperature=0.2)
+
+    if not isinstance(parsed, dict):
+        parsed = {}
+
+    stat = parsed.get("stat_used")
+    if stat and stat not in VALID_STATS:
+        parsed["stat_used"] = "charisma"
+
+    parsed.setdefault("stat_used", "charisma")
+    parsed.setdefault("dc_input", "med_risk")
+    parsed.setdefault("e_modifier", 0)
+    parsed.setdefault("reasoning", "Standard action check.")
+
+    return parsed
 
 
 def narrate_outcome(player_state: dict, action_intent: str, dice_outcome: dict) -> dict:
@@ -104,44 +162,17 @@ def narrate_outcome(player_state: dict, action_intent: str, dice_outcome: dict) 
     ]
 
     parsed = _call_model(messages, temperature=0.6)
-    
+
     if not isinstance(parsed, dict):
         parsed = {}
 
     parsed.setdefault("narrative", "")
     parsed.setdefault("choices", [])
     parsed.setdefault("state_deltas", {})
-    
+
     if not isinstance(parsed["choices"], list):
         parsed["choices"] = [str(parsed["choices"])]
     if not isinstance(parsed["state_deltas"], dict):
         parsed["state_deltas"] = {}
 
-    return parsed
-
-
-def narrate_outcome(player_state: dict, action_intent: str, dice_outcome: dict) -> dict:
-    """
-    dice_outcome is already final -- it came from dice.resolve_check() in
-    main.py, using the REAL stat value pulled off the Player object, not
-    anything the AI said in interpret_action(). This call only narrates it.
-    """
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {
-            "role": "user",
-            "content": (
-                "Narrate the outcome and return JSON with these keys: "
-                "narrative, choices, state_deltas.\n"
-                f"Action intent: {action_intent}\n"
-                f"Dice outcome: {json.dumps(dice_outcome, default=str)}\n"
-                f"Player state: {json.dumps(player_state, default=str)}"
-            ),
-        },
-    ]
-
-    parsed = _call_model(messages, temperature=0.6)
-    parsed.setdefault("narrative", "")
-    parsed.setdefault("choices", [])
-    parsed.setdefault("state_deltas", {})
     return parsed

@@ -4,9 +4,9 @@ from Player import Player
 
 #Convert 0-100 Stats into a dice roll modifier
 def stat_to_modifier(stat):
-    if stat < 0 or stat > 100:
-        raise ValueError("Stat must be between 0 and 100")
-    return (stat - 50) // 10
+    if stat < 0 or stat > 20:
+        raise ValueError("Stat must be between 0 and 20")
+    return (stat - 10) // 2
 
 #Roll 2d20 and add the modifier
 def roll_2d20(stat: int, e_modifier: int = 0):
@@ -37,9 +37,12 @@ def resolve_check(stat: int, dc_input, e_modifier: int = 0):
     elif roll >= dc - 3:
         outcome = "partial_success"
         print(f"Partial Success! Rolled {roll} against DC {dc}.")
-    else:
+    elif roll >= dc - 9:
         outcome = "fail"
         print(f"Fail! Rolled {roll} against DC {dc}.")
+    else:
+        outcome = "Crit fail"
+        print(f"Crit Fail! Rolled {roll} against DC {dc}.")
 
     return {
         "dc": dc,

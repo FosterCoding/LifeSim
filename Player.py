@@ -1,24 +1,26 @@
 from dataclasses import dataclass, field
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 
 @dataclass
-class Player: #these will determine the starting stats of the player
+class Player:
     # Personal Info & Calendar Tracker
-    name: str
-    age: int
-    month: str
-    year: int
-    location: str
+    name: str = "Unknown"
+    age: int = 18
+    month: str = "January"
+    year: int = 2024
+    location: str = "New York, NY"
 
-    #Core stats
-    health: int
-    strength: int
-    charisma: int
-    intelligence: int
-    willpower: int
-    stress: int
+    # Core stats (D&D scale: 0 to 20)
+    health: int = 10
+    strength: int = 10
+    charisma: int = 10
+    intelligence: int = 10
+    willpower: int = 10
+    stress: int = 0
 
-    cash: float # Liquid spending money ($)
+    cash: float = 0.0  # Liquid spending money ($)
+    
     # Character context
     occupation: str = ""
     background: str = ""
@@ -26,26 +28,40 @@ class Player: #these will determine the starting stats of the player
     # Persistent simulation state
     skills: Dict[str, int] = field(default_factory=dict)
     inventory: List[str] = field(default_factory=list)
-    relationships: Dict[str, int] = field(default_factory=dict)
     reputation: Dict[str, int] = field(default_factory=dict)
     debt: float = 0.0
     status_flags: List[str] = field(default_factory=list)
 
+    # Detailed History & Social Tracking (matching visual reference)
+    # Structured as: {"Person Name": {"relation": "Mother", "quality": 85, "status": "Living"}}
+    relationships: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    
+    # Structured as: [{"year": 2024, "age": 18, "event": "Graduated High School", "impact": "Positive"}]
+    life_events: List[Dict[str, Any]] = field(default_factory=list)
+
+    def log_life_event(self, event: str, impact: str = "Neutral") -> None:
+        """Helper to append a structured event to the player's life history timeline."""
+        self.life_events.append({
+            "year": self.year,
+            "age": self.age,
+            "event": event,
+            "impact": impact
+        })
 
     def apply_deltas(self, state_deltas: Dict[str, Any]) -> None:
         """
         Applies state updates returned by narrate_outcome to the player object.
-        Supports stat increments/decrements, list additions/removals, and dict updates.
+        Supports stat increments/decrements, list additions/removals, dict updates, and event logging.
         """
         if not isinstance(state_deltas, dict):
             return
         for key, delta in state_deltas.items():
             # 1. Update Numeric Attributes
             if hasattr(self, key):
-                current_val = getattr(self, key)                
+                current_val = getattr(self, key)    
                 # Direct numeric adjustments (e.g. "health": -2, "cash": 50.0, "stress": 3)
                 if isinstance(current_val, (int, float)) and isinstance(delta, (int, float)):
-                    new_val = current_val + delta                
+                    new_val = current_val + delta
                     # Clamp Core D&D Stats & Health between 0 and 20
                     if key in {"health", "strength", "charisma", "intelligence", "willpower"}:
                         new_val = max(0, min(20, int(new_val)))
@@ -71,8 +87,14 @@ class Player: #these will determine the starting stats of the player
                 for item in delta:
                     if item in self.status_flags:
                         self.status_flags.remove(item)
+            # 6. Log New Life Event if provided in deltas
+            # e.g. "add_life_event": {"event": "Arrested for burglary", "impact": "Negative"}
+            if key == "add_life_event" and isinstance(delta, dict):
+                self.log_life_event(
+                    event=delta.get("event", "Unknown Event"),
+                    impact=delta.get("impact", "Neutral")
+                )
 
-    
     def export_engine_state(self) -> Dict[str, Any]:
         """Packages the player state into a dictionary for internal tracking or LLM payloads."""
         return {
@@ -94,4 +116,5 @@ class Player: #these will determine the starting stats of the player
             "reputation": self.reputation,
             "debt": self.debt,
             "status_flags": self.status_flags,
+            "life_events": self.life_events,
         }

@@ -528,4 +528,13 @@
             const eventsList = document.getElementById('events-list');
             if (state.life_events && state.life_events.length > 0) {
                 eventsList.innerHTML = state.life_events.map(ev => {
-                    const yearStr = ev.year ? `[${ev.year}]
+                    const yearStr = ev.year ? `[${ev.year}] ` : '';
+                    return `<div class="list-item">${yearStr}${ev.description || ev}</div>`;
+                }).join('');
+            } else {
+                eventsList.innerHTML = `<div class="list-item" style="color: #666;">No recorded life events.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,9 +1,7 @@
-import json
 import os
-from typing import Any, Dict
-
-from dotenv import load_dotenv
+import httpx
 from openai import OpenAI
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -11,11 +9,15 @@ API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("AI_API_KEY")
 if not API_KEY:
     raise RuntimeError("No API key found. Set OPENROUTER_API_KEY or AI_API_KEY in your .env file or environment.")
 
-MODEL_NAME = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-v4-flash-latest")
+MODEL_NAME = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-chat")
+
+# Bypasses PythonAnywhere proxy incompatibility
+http_client = httpx.Client(trust_env=False)
 
 client = OpenAI(
     api_key=API_KEY,
     base_url="https://openrouter.ai/api/v1",
+    http_client=http_client
 )
 
 SYSTEM_PROMPT = """You are the narrative engine for LifeSim, an interactive life simulator. You are a biographer documenting a real, ordinary, occasionally brutal life in incremental installments. You do not run calculations or determine outcomes — Python handles the dice rolls. You turn mechanical engine outcomes into grounded, hyper-realistic prose and structured state updates.

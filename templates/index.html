@@ -2,116 +2,227 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LifeSim Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeSim RPG</title>
     <style>
-        /* Base Dark Mode Styling */
+        /* Base Dark Mode & Reset */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: #000000;
             color: #ffffff;
             font-family: 'Courier New', Courier, monospace;
-            padding: 20px;
-            max-width: 800px;
+            padding: 12px;
+            max-width: 850px;
             margin: 0 auto;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* Top Bar & Stats Button */
+        /* Top Header & Header Info */
         .header {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333333;
+            margin-bottom: 10px;
+        }
+
+        .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #333;
-            margin-bottom: 20px;
         }
 
-        .stats-btn {
-            background-color: transparent;
-            color: #ffffff;
-            border: 1px solid #ffffff;
-            padding: 8px 16px;
-            cursor: pointer;
+        .header h1 {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .character-meta {
+            font-size: 0.8rem;
+            color: #888888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid #333333;
+            margin-bottom: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: #888888;
+            border: 1px solid transparent;
+            border-bottom: none;
+            padding: 8px 12px;
             font-family: inherit;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.15s ease;
         }
 
-        .stats-btn:hover {
-            background-color: #ffffff;
+        .tab-btn:hover {
+            color: #ffffff;
+        }
+
+        .tab-btn.active {
             color: #000000;
+            background-color: #ffffff;
+            border-color: #ffffff;
+            font-weight: bold;
         }
 
-        /* Story Display Container */
-        #story-container {
+        /* Main Display Panels */
+        .panel {
+            display: none;
             flex-grow: 1;
             overflow-y: auto;
-            margin-bottom: 20px;
-            line-height: 1.6;
-            white-space: pre-wrap;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Story Panel & Blocks */
+        #story-panel {
+            gap: 12px;
         }
 
         .narrative-block {
-            margin-bottom: 15px;
+            color: #ffffff;
+            white-space: pre-wrap;
         }
 
         .user-action-block {
             color: #aaaaaa;
             font-style: italic;
-            margin-bottom: 15px;
+            border-left: 2px solid #555555;
+            padding-left: 8px;
+        }
+
+        /* Dice Roll Outcome Display */
+        .dice-badge {
+            display: inline-block;
+            background-color: #111111;
+            border: 1px solid #ffffff;
+            padding: 6px 10px;
+            margin: 6px 0;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Generic Tab Data Formatting */
+        .data-section {
+            margin-bottom: 16px;
+        }
+
+        .data-section h3 {
+            font-size: 0.9rem;
+            border-bottom: 1px dashed #444444;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            color: #888888;
+            text-transform: uppercase;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 8px;
+        }
+
+        .stat-card {
+            border: 1px solid #222222;
+            padding: 8px;
+            background: #050505;
+        }
+
+        .stat-name {
+            font-size: 0.75rem;
+            color: #888888;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .list-item {
+            padding: 6px 0;
+            border-bottom: 1px solid #111111;
+            font-size: 0.9rem;
         }
 
         /* Action Controls Area */
         .controls {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
+            margin-top: auto;
+            padding-top: 8px;
+            border-top: 1px solid #222222;
         }
 
         .choices-container {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .choice-btn {
             background-color: #000000;
             color: #ffffff;
-            border: 1px solid #444;
-            padding: 12px;
+            border: 1px solid #333333;
+            padding: 10px 12px;
             text-align: left;
             cursor: pointer;
             font-family: inherit;
-            font-size: 1rem;
-            transition: border-color 0.2s, background-color 0.2s;
+            font-size: 0.9rem;
+            transition: background-color 0.15s, border-color 0.15s;
         }
 
-        .choice-btn:hover {
+        .choice-btn:hover, .choice-btn:active {
             border-color: #ffffff;
             background-color: #111111;
         }
 
-        /* Custom Input Prompt Box */
         .custom-input-group {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         input[type="text"] {
             flex-grow: 1;
             background-color: #000000;
             color: #ffffff;
-            border: 1px solid #444;
+            border: 1px solid #333333;
             padding: 10px;
             font-family: inherit;
-            font-size: 1rem;
+            font-size: 0.9rem;
+            border-radius: 0;
         }
 
         input[type="text"]:focus {
@@ -123,97 +234,105 @@
             background-color: #ffffff;
             color: #000000;
             border: 1px solid #ffffff;
-            padding: 10px 20px;
+            padding: 10px 16px;
             font-weight: bold;
             cursor: pointer;
             font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 0;
         }
 
-        /* Modal Popup for Character Stats */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            justify-content: center;
-            align-items: center;
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
         }
-
-        .modal-content {
-            background-color: #000000;
-            border: 1px solid #ffffff;
-            padding: 24px;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
+        ::-webkit-scrollbar-track {
+            background: #000000;
         }
-
-        .close-modal {
-            float: right;
-            cursor: pointer;
-            font-size: 1rem;
-            border: 1px solid #ffffff;
-            background: none;
-            color: #ffffff;
-            padding: 2px 8px;
-        }
-
-        .close-modal:hover {
-            background-color: #ffffff;
-            color: #000000;
-        }
-
-        pre {
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: inherit;
-            line-height: 1.5;
+        ::-webkit-scrollbar-thumb {
+            background: #333333;
         }
     </style>
 </head>
 <body>
 
-    <!-- Header Section -->
     <div class="header">
-        <h1>LifeSim</h1>
-        <button class="stats-btn" onclick="openStats()">Show Stats</button>
+        <div class="header-top">
+            <h1>LifeSim</h1>
+            <span id="header-cash" style="font-weight: bold;">$0</span>
+        </div>
+        <div id="character-meta" class="character-meta">Loading character data...</div>
     </div>
 
-    <!-- Main Narrative Output Window -->
-    <div id="story-container">
-        <div class="narrative-block">Starting game engine...</div>
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('story-panel', this)">Narrative</button>
+        <button class="tab-btn" onclick="switchTab('stats-panel', this)">Stats & Mods</button>
+        <button class="tab-btn" onclick="switchTab('relationships-panel', this)">Relationships</button>
+        <button class="tab-btn" onclick="switchTab('inventory-panel', this)">Inventory</button>
+        <button class="tab-btn" onclick="switchTab('events-panel', this)">Events</button>
     </div>
 
-    <!-- User Controls Area -->
+    <div id="story-panel" class="panel active">
+        <div class="narrative-block">Initializing engine state...</div>
+    </div>
+
+    <div id="stats-panel" class="panel">
+        <div class="data-section">
+            <h3>Core Stats (0–20 Scale)</h3>
+            <div id="stats-grid" class="stat-grid"></div>
+        </div>
+        <div class="data-section">
+            <h3>Status Flags & Conditions</h3>
+            <div id="status-flags-list">None</div>
+        </div>
+    </div>
+
+    <div id="relationships-panel" class="panel">
+        <div class="data-section">
+            <h3>Known Acquaintances & Connections</h3>
+            <div id="relationships-list">No relationships formed yet.</div>
+        </div>
+    </div>
+
+    <div id="inventory-panel" class="panel">
+        <div class="data-section">
+            <h3>Possessions & Items</h3>
+            <div id="inventory-list">Inventory is empty.</div>
+        </div>
+    </div>
+
+    <div id="events-panel" class="panel">
+        <div class="data-section">
+            <h3>Life History Log</h3>
+            <div id="events-list">No recorded life events.</div>
+        </div>
+    </div>
+
     <div class="controls">
-        <!-- Preset Choice Buttons -->
         <div id="choices-container" class="choices-container"></div>
 
-        <!-- Custom Action Input -->
         <div class="custom-input-group">
-            <input type="text" id="custom-action" placeholder="Type a custom action..." onkeydown="handleKeyPress(event)">
+            <input type="text" id="custom-action" placeholder="Type custom action..." onkeydown="handleKeyPress(event)">
             <button class="submit-btn" onclick="sendCustomAction()">Send</button>
         </div>
     </div>
 
-    <!-- Stats Modal Box -->
-    <div id="stats-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeStats()">X</button>
-            <h2>Character Sheet</h2>
-            <hr style="border-color: #333; margin: 10px 0;">
-            <pre id="stats-display">Loading stats...</pre>
-        </div>
-    </div>
-
     <script>
+        let cachedState = null;
+
         window.onload = () => {
             startNewGame();
         };
+
+        // Tab Switching Logic
+        function switchTab(panelId, btnElement) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+        }
 
         async function startNewGame() {
             try {
@@ -224,26 +343,29 @@
                 });
                 const data = await response.json();
 
+                if (data.player_state) {
+                    updateUIState(data.player_state);
+                }
+
                 if (data.narration) {
                     if (data.narration.narrative) {
-                        updateStory(data.narration.narrative);
+                        setStory(data.narration.narrative);
                     }
                     if (data.narration.choices) {
                         renderChoices(data.narration.choices);
                     }
                 }
             } catch (err) {
-                console.error("Failed to start new game:", err);
-                updateStory("Error initializing game engine.");
+                console.error("Failed to start game:", err);
+                setStory("Error initializing game engine.");
             }
         }
 
         async function sendAction(actionText) {
             if (!actionText.trim()) return;
 
-            // Clear active choice buttons while processing
             renderChoices([]);
-            appendStory(`> ${actionText}`, true);
+            appendStory(`> ${actionText}`, 'user');
 
             try {
                 const response = await fetch('/api/action', {
@@ -259,14 +381,26 @@
                     return;
                 }
 
+                // Render Dice Roll Outcome if present
+                if (data.dice_outcome && data.dice_outcome.roll !== undefined) {
+                    renderDiceOutcome(data.dice_outcome);
+                }
+
+                // Append Narrative Output
                 if (data.narration) {
                     if (data.narration.narrative) {
-                        appendStory(data.narration.narrative);
+                        appendStory(data.narration.narrative, 'narrative');
                     }
                     if (data.narration.choices) {
                         renderChoices(data.narration.choices);
                     }
                 }
+
+                // Refresh Character Engine State
+                if (data.player_state) {
+                    updateUIState(data.player_state);
+                }
+
             } catch (err) {
                 console.error("Failed to perform action:", err);
                 appendStory("[Connection error. Please try again.]");
@@ -288,18 +422,33 @@
             }
         }
 
-        function updateStory(text) {
-            const container = document.getElementById('story-container');
+        function setStory(text) {
+            const container = document.getElementById('story-panel');
             container.innerHTML = `<div class="narrative-block">${text}</div>`;
             container.scrollTop = container.scrollHeight;
         }
 
-        function appendStory(text, isUserAction = false) {
-            const container = document.getElementById('story-container');
+        function appendStory(text, type = 'narrative') {
+            const container = document.getElementById('story-panel');
             const newBlock = document.createElement('div');
-            newBlock.className = isUserAction ? 'user-action-block' : 'narrative-block';
+            newBlock.className = type === 'user' ? 'user-action-block' : 'narrative-block';
             newBlock.textContent = text;
             container.appendChild(newBlock);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Formats and displays the roll outcome
+        function renderDiceOutcome(dice) {
+            const container = document.getElementById('story-panel');
+            const badge = document.createElement('div');
+            badge.className = 'dice-badge';
+            
+            const rollVal = dice.roll ?? 0;
+            const targetDC = dice.dc ?? 'N/A';
+            const outcomeStr = (dice.outcome || 'resolved').replace(/_/g, ' ');
+
+            badge.textContent = `[DICE ROLL: ${rollVal} vs DC ${targetDC} \vert{} OUTCOME:${outcomeStr}]`;
+            container.appendChild(badge);
             container.scrollTop = container.scrollHeight;
         }
 
@@ -318,54 +467,65 @@
             }
         }
 
-        // Fetch and format stats for Modal Display
-        async function openStats() {
-            const modal = document.getElementById('stats-modal');
-            const statsDisplay = document.getElementById('stats-display');
-            modal.style.display = 'flex';
+        // Populates UI across all tabs using the exported engine state JSON
+        function updateUIState(state) {
+            cachedState = state;
 
-            try {
-                const response = await fetch('/api/state');
-                const data = await response.json();
+            // 1. Header Metadata
+            document.getElementById('character-meta').textContent = state.header || '';
+            document.getElementById('header-cash').textContent = `$${state.cash ?? 0}`;
 
-                if (data.error) {
-                    statsDisplay.textContent = "No active character session found.";
-                    return;
+            // 2. Core Stats Grid
+            const statsGrid = document.getElementById('stats-grid');
+            statsGrid.innerHTML = '';
+            if (state.stats) {
+                for (const [stat, val] of Object.entries(state.stats)) {
+                    // Calculate roll modifier derived from stat: (stat - 10) / 2
+                    const mod = Math.floor((val - 10) / 2);
+                    const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.innerHTML = `
+                        <div class="stat-name">${stat}</div>
+                        <div class="stat-value">${val} <span style="font-size: 0.8rem; color: #888;">(${modStr})</span></div>
+                    `;
+                    statsGrid.appendChild(card);
                 }
-
-                // Format player stats cleanly
-                let output = `${data.header || "Character Overview"}\n`;
-                output += `Occupation: ${data.occupation || "N/A"}\n`;
-                output += `Background: ${data.background || "N/A"}\n\n`;
-                
-                output += `--- CORE STATS ---\n`;
-                if (data.stats) {
-                    for (const [stat, val] of Object.entries(data.stats)) {
-                        output += `${stat.toUpperCase().padEnd(14)}: ${val}\n`;
-                    }
-                }
-
-                output += `\n--- FINANCES ---\n`;
-                output += `Cash          : $${data.cash ?? 0}\n`;
-                output += `Debt          : $${data.debt ?? 0}\n`;
-
-                if (data.inventory && data.inventory.length > 0) {
-                    output += `\n--- INVENTORY ---\n${data.inventory.join(', ')}\n`;
-                }
-
-                if (data.status_flags && data.status_flags.length > 0) {
-                    output += `\n--- STATUS FLAGS ---\n${data.status_flags.join(', ')}\n`;
-                }
-
-                statsDisplay.textContent = output;
-            } catch (err) {
-                statsDisplay.textContent = "Unable to fetch state.";
             }
-        }
 
-        function closeStats() {
-            document.getElementById('stats-modal').style.display = 'none';
-        }
-    </script>
-</body>
-</html>
+            // 3. Status Flags
+            const flagsList = document.getElementById('status-flags-list');
+            if (state.status_flags && state.status_flags.length > 0) {
+                flagsList.innerHTML = state.status_flags.map(f => `<div class="list-item">• ${f}</div>`).join('');
+            } else {
+                flagsList.innerHTML = `<div class="list-item" style="color: #666;">No active status flags.</div>`;
+            }
+
+            // 4. Relationships
+            const relsList = document.getElementById('relationships-list');
+            if (state.relationships && Object.keys(state.relationships).length > 0) {
+                let html = '';
+                for (const [name, info] of Object.entries(state.relationships)) {
+                    const relType = info.relation || 'Acquaintance';
+                    const quality = info.quality ?? 50;
+                    html += `<div class="list-item"><strong>${name}</strong> (${relType}) — Quality:${quality}/100</div>`;
+                }
+                relsList.innerHTML = html;
+            } else {
+                relsList.innerHTML = `<div class="list-item" style="color: #666;">No known relationships recorded.</div>`;
+            }
+
+            // 5. Inventory
+            const invList = document.getElementById('inventory-list');
+            if (state.inventory && state.inventory.length > 0) {
+                invList.innerHTML = state.inventory.map(item => `<div class="list-item">• ${item}</div>`).join('');
+            } else {
+                invList.innerHTML = `<div class="list-item" style="color: #666;">Inventory is empty.</div>`;
+            }
+
+            // 6. Life Events Log
+            const eventsList = document.getElementById('events-list');
+            if (state.life_events && state.life_events.length > 0) {
+                eventsList.innerHTML = state.life_events.map(ev => {
+                    const yearStr = ev.year ? `[${ev.year}]

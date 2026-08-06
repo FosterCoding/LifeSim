@@ -11,14 +11,14 @@ API_KEY = os.getenv("OPENROUTER_API_KEY") or os.getenv("AI_API_KEY")
 if not API_KEY:
     raise RuntimeError("No API key found. Set OPENROUTER_API_KEY or AI_API_KEY in your .env file or environment.")
 
-MODEL_NAME = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-large")
+MODEL_NAME = os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-v4-flash-latest")
 
 client = OpenAI(
     api_key=API_KEY,
     base_url="https://openrouter.ai/api/v1",
 )
 
-SYSTEM_PROMPT = SYSTEM_PROMPT = """You are acting as the Game Master for a gritty, hyper-realistic text-based Life Simulator RPG.
+SYSTEM_PROMPT = """You are acting as the Game Master for a gritty, hyper-realistic text-based Life Simulator RPG.
 
 ================== CORE MANDATES ==================
 1. REALISM & TONAL GROUNDING:
@@ -65,12 +65,14 @@ When narrating outcome (narrate_outcome), return EXACTLY this JSON:
 VALID_STATS = {"health", "strength", "charisma", "intelligence", "willpower", "stress"}
 
 
-def _call_model(messages: list[dict[str, str]], temperature: float = 0.75) -> Dict[str, Any]:
+def _call_model(messages: list[dict[str, str]], temperature: float = 0.6, top_p: float = 0.95) -> Dict[str, Any]:
     response = client.chat.completions.create(
         model=MODEL_NAME,
         messages=messages,
         temperature=temperature,
-        frequency_penalty=0.4,
+        top_p=top_p,
+        frequency_penalty=0.1,
+        presence_penalty=0.0
         response_format={"type": "json_object"},
     )
     content = response.choices[0].message.content
@@ -83,40 +85,38 @@ def _call_model(messages: list[dict[str, str]], temperature: float = 0.75) -> Di
         raise ValueError(f"The model returned invalid JSON: {content}") from exc
 
 
-def interpret_action(player_state: dict, action_intent: str) -> dict:
+def narrate_outcome(player_state: dict, action_intent: str, dice_outcome: dict) -> dict:
     """
-    Give the AI the player's free-text action plus their current state.
-    It names WHICH stat and WHICH difficulty tier this tests -- it does
-    not roll dice or invent a stat value, only classifies.
+    Generates narrative scene, player choices, and state changes based on deterministic dice outcome.
     """
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {
             "role": "user",
             "content": (
-                "Classify the action and return JSON with these keys: "
-                "stat_used, dc_input, e_modifier, reasoning.\n"
+                "Narrate the outcome and return JSON with these keys: "
+                "narrative, choices, state_deltas.\n"
                 f"Action intent: {action_intent}\n"
+                f"Dice outcome: {json.dumps(dice_outcome, default=str)}\n"
                 f"Player state: {json.dumps(player_state, default=str)}"
             ),
         },
     ]
 
-    parsed = _call_model(messages, temperature=0.1)
-    stat_used = parsed.get("stat_used")
+    parsed = _call_model(messages, temperature=0.6)
+    
+    if not isinstance(parsed, dict):
+        parsed = {}
 
-    if isinstance(stat_used, str):
-        normalized_stat = stat_used.lower()
-        if normalized_stat in VALID_STATS:
-            parsed["stat_used"] = normalized_stat
-        else:
-            parsed["stat_used"] = None
-    else:
-        parsed["stat_used"] = None
+    parsed.setdefault("narrative", "")
+    parsed.setdefault("choices", [])
+    parsed.setdefault("state_deltas", {})
+    
+    if not isinstance(parsed["choices"], list):
+        parsed["choices"] = [str(parsed["choices"])]
+    if not isinstance(parsed["state_deltas"], dict):
+        parsed["state_deltas"] = {}
 
-    parsed.setdefault("dc_input", "med_risk")
-    parsed.setdefault("e_modifier", 0)
-    parsed.setdefault("reasoning", "")
     return parsed
 
 
@@ -140,7 +140,7 @@ def narrate_outcome(player_state: dict, action_intent: str, dice_outcome: dict) 
         },
     ]
 
-    parsed = _call_model(messages, temperature=0.7)
+    parsed = _call_model(messages, temperature=0.6)
     parsed.setdefault("narrative", "")
     parsed.setdefault("choices", [])
     parsed.setdefault("state_deltas", {})

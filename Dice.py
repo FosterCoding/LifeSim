@@ -15,17 +15,69 @@ def roll_2d20(stat: int, e_modifier: int = 0):
     roll = random.randint(1, 20) + random.randint(1, 20)
     return roll + modifier + e_modifier
 
+def _normalize_tier(raw: str) -> str:
+    """Lowercase, strip, and collapse spaces/hyphens to underscores so trivial
+    formatting differences ('Low Risk', 'low-risk', 'LOW_RISK') all match the
+    same canonical key."""
+    return raw.strip().lower().replace(" ", "_").replace("-", "_")
+
+
+# Alternate phrasings the model has been observed to use (or could reasonably
+# invent) that should resolve to a real tier instead of crashing the turn.
+# Keys must already be normalized (see _normalize_tier).
+TIER_ALIASES = {
+    "low": "low_risk",
+    "low_risk": "low_risk",
+    "very_low_risk": "low_risk",
+    "trivial": "low_risk",
+    "easy": "low_risk",
+    "routine": "low_risk",
+    "standard": "standard",
+    "normal": "standard",
+    "medium": "med_risk",
+    "moderate": "med_risk",
+    "med_risk": "med_risk",
+    "medium_risk": "med_risk",
+    "high": "high_risk",
+    "high_risk": "high_risk",
+    "hard": "high_risk",
+    "difficult": "high_risk",
+    "very_high_risk": "high_risk",
+    "extreme": "high_risk",
+}
+
+
+def resolve_dc_tier(dc_input) -> tuple[int, str]:
+    """
+    Resolves a dc_input (string tier name or raw int) to an actual DC number.
+    Returns (dc, resolved_tier_name). Never raises: an unrecognized string
+    falls back to "standard" rather than crashing the turn, since a slightly
+    wrong difficulty is a much smaller problem than the whole action failing
+    with a roll of 0.
+    """
+    if not isinstance(dc_input, str):
+        return dc_input, "custom"
+
+    normalized = _normalize_tier(dc_input)
+
+    if normalized in difficulty_classes:
+        return difficulty_classes[normalized], normalized
+
+    if normalized in TIER_ALIASES:
+        resolved = TIER_ALIASES[normalized]
+        return difficulty_classes[resolved], resolved
+
+    # Last resort: unrecognized tier entirely. Default to standard rather
+    # than raising, and let the caller know a fallback occurred.
+    return difficulty_classes["standard"], "standard (fallback)"
+
+
 #Resolve the stat check by rolling 2d20 and comparing it to the target Difficulty Class (DC)
 def resolve_check(stat: int, dc_input, e_modifier: int = 0):
-    # If the AI (or you) passed a string like "med_risk", translate it to the number
-    if isinstance(dc_input, str):
-        if dc_input not in difficulty_classes:
-            raise ValueError(f"Unknown difficulty tier: {dc_input}")
-        dc = difficulty_classes[dc_input]
-    else:
-        dc = dc_input  # If they passed a raw integer, just use it directly
+    dc, resolved_tier = resolve_dc_tier(dc_input)
+    if isinstance(dc_input, str) and _normalize_tier(dc_input) not in difficulty_classes:
+        print(f"Note: unrecognized difficulty tier '{dc_input}', resolved to '{resolved_tier}' (DC {dc}).")
 
-    
     roll = roll_2d20(stat, e_modifier)
     #Rolls should be rewarded for being above the DC, with a great success being 5 or more above the DC, a standard success being equal to or above the DC, a partial success being within 3 below the DC, and a fail being below the DC.
     if roll >= dc + 5:
@@ -51,6 +103,7 @@ def resolve_check(stat: int, dc_input, e_modifier: int = 0):
     }
 
 difficulty_classes = {
+    "low_risk": 10,
     "standard": 15,
     "med_risk": 23,
     "high_risk": 30

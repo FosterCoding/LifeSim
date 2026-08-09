@@ -1,0 +1,2206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeSim RPG</title>
+    <style>
+        :root {
+            --bg: #060504;
+            --panel: #0d0a06;
+            --panel-2: #15100a;
+            --text: #f7f3e8;
+            --muted: #9a9186;
+            --line: #2b2410;
+            --gold: #d4af37;
+            --gold-bright: #f6d365;
+            --gold-dim: #8a6d1f;
+            --gold-soft: rgba(212, 175, 55, 0.12);
+            --shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            min-height: 100vh;
+            min-height: 100dvh;
+            overscroll-behavior-y: none;
+            background:
+                radial-gradient(circle at top, rgba(212, 175, 55, 0.08), transparent 35%),
+                linear-gradient(180deg, #030302 0%, #060504 45%, #020201 100%);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            padding: 14px;
+            max-width: 920px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 16px 16px 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.35rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.28);
+            cursor: pointer;
+            transition: color 0.15s ease, text-shadow 0.15s ease;
+        }
+
+        .header h1:hover,
+        .header h1:active {
+            color: var(--gold-bright);
+            text-shadow: 0 0 14px rgba(212, 175, 55, 0.5);
+        }
+
+        .cash-pill {
+            padding: 7px 12px;
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 999px;
+            color: var(--gold-bright);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+        }
+
+        .character-meta {
+            font-size: 0.82rem;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .character-meta::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 12px 12px 0;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 12px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--muted);
+            border: 1px solid rgba(212, 175, 55, 0.14);
+            border-bottom: none;
+            border-radius: 12px 12px 0 0;
+            padding: 10px 14px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+            flex: 0 0 auto;
+        }
+
+        .tab-btn:hover {
+            color: #ffffff;
+            border-color: rgba(212, 175, 55, 0.32);
+            transform: translateY(-1px);
+        }
+
+        .tab-btn.active {
+            color: #020402;
+            background: linear-gradient(180deg, #f6d365, #d4af37);
+            border-color: #f6d365;
+            font-weight: bold;
+            box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.2), 0 6px 16px rgba(212, 175, 55, 0.18);
+        }
+
+        .panel {
+            display: none;
+            margin: 0 12px 12px;
+            line-height: 1.55;
+            position: relative;
+            z-index: 1;
+        }
+
+        .panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Story panel */
+        #story-panel {
+            gap: 12px;
+            padding-bottom: 0;
+        }
+
+        .story-screen {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 4px 4px 24px;
+        }
+
+        .story-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .scene-title {
+            font-size: 0.72rem;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            color: var(--gold);
+            opacity: 0.9;
+        }
+
+        .narrative-block {
+            color: #ffffff;
+            white-space: pre-wrap;
+            padding: 10px 12px;
+            border-left: 2px solid rgba(212, 175, 55, 0.7);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0 10px 10px 0;
+        }
+
+        .user-action-block {
+            color: #ddd6c8;
+            font-style: italic;
+            padding: 10px 12px;
+            border: 1px solid rgba(212, 175, 55, 0.14);
+            border-radius: 12px;
+            background: rgba(212, 175, 55, 0.07);
+        }
+
+        .dice-badge {
+            display: inline-flex;
+            width: fit-content;
+            align-items: center;
+            gap: 8px;
+            background: rgba(212, 175, 55, 0.1);
+            color: var(--gold-bright);
+            font-weight: bold;
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            border-radius: 999px;
+            padding: 7px 12px;
+            margin: 0;
+            font-size: 0.78rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .data-section {
+            margin-bottom: 16px;
+        }
+
+        .data-section h3 {
+            font-size: 0.88rem;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+        }
+
+        .stat-card {
+            border: 1px solid rgba(212, 175, 55, 0.14);
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+        }
+
+        .stat-name {
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .stat-value {
+            font-size: 1.08rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-top: 2px;
+        }
+
+        .list-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.9rem;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Action Controls Area */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 20px 4px 40px;
+            border-top: 1px solid var(--line);
+        }
+
+        .choices-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .choice-btn {
+            background: linear-gradient(180deg, rgba(16, 13, 8, 0.98), rgba(6, 5, 4, 0.98));
+            color: #ffffff;
+            border: 1px solid rgba(212, 175, 55, 0.24);
+            border-left: 3px solid var(--gold);
+            border-radius: 12px;
+            padding: 12px 14px;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.92rem;
+            transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            line-height: 1.4;
+        }
+
+        .choice-btn:hover, .choice-btn:active {
+            border-color: rgba(212, 175, 55, 0.7);
+            background: rgba(212, 175, 55, 0.09);
+            transform: translateY(-1px);
+            box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.09), 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.62);
+            color: #ffffff;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            border-radius: 12px;
+            outline: none;
+        }
+
+        input[type="text"]::placeholder, input[type="number"]::placeholder {
+            color: #726a58;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus, select:focus {
+            border-color: rgba(212, 175, 55, 0.75);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+        }
+
+        select option {
+            background: #0d0a06;
+            color: #ffffff;
+        }
+
+        .submit-btn {
+            background: linear-gradient(180deg, #f6d365, #d4af37);
+            color: #020402;
+            border: 1px solid #f6d365;
+            padding: 12px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .submit-btn:hover, .submit-btn:active {
+            transform: translateY(-1px);
+            box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.14), 0 8px 18px rgba(212, 175, 55, 0.14);
+        }
+
+        .secondary-btn {
+            background: transparent;
+            color: var(--gold-bright);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            padding: 12px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            transition: transform 0.15s ease, background-color 0.15s ease;
+            white-space: nowrap;
+        }
+
+        .secondary-btn:hover, .secondary-btn:active {
+            background: rgba(212, 175, 55, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .cheat-toggle {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 2px 0;
+            text-align: left;
+            align-self: flex-start;
+        }
+
+        .cheat-toggle:hover {
+            color: var(--gold-bright);
+        }
+
+        .cheat-panel {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            border: 1px dashed rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            background: rgba(212, 175, 55, 0.03);
+        }
+
+        .cheat-panel.open {
+            display: flex;
+        }
+
+        .cheat-panel-label {
+            font-size: 0.66rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .cheat-btn-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .cheat-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 10px;
+            padding: 9px 6px;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .cheat-btn:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        .cheat-btn.great-success { color: #7de88a; border-color: rgba(125, 232, 138, 0.35); }
+        .cheat-btn.success { color: var(--gold-bright); }
+        .cheat-btn.partial { color: #e8c87d; border-color: rgba(232, 200, 125, 0.35); }
+        .cheat-btn.fail { color: #e89a7d; border-color: rgba(232, 154, 125, 0.35); }
+        .cheat-btn.crit-fail { color: #e87d7d; border-color: rgba(232, 125, 125, 0.4); }
+
+        .cheat-btn.locked-active {
+            background: currentColor;
+            box-shadow: 0 0 0 2px currentColor, 0 0 12px rgba(255, 255, 255, 0.15);
+        }
+
+        .cheat-btn.locked-active::after {
+            content: ' \1F512';
+        }
+
+        .cheat-btn.great-success.locked-active { color: #051a08; background: #7de88a; }
+        .cheat-btn.success.locked-active { color: #201900; background: var(--gold-bright); }
+        .cheat-btn.partial.locked-active { color: #201900; background: #e8c87d; }
+        .cheat-btn.fail.locked-active { color: #200a00; background: #e89a7d; }
+        .cheat-btn.crit-fail.locked-active { color: #200000; background: #e87d7d; }
+
+        .cheat-lock-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text);
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px;
+            padding: 8px 10px;
+            margin-top: 4px;
+        }
+
+        .cheat-off-btn {
+            background: none;
+            border: 1px solid rgba(232, 125, 125, 0.5);
+            color: #e87d7d;
+            border-radius: 8px;
+            padding: 5px 10px;
+            font-family: inherit;
+            font-size: 0.68rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .cheat-off-btn:hover {
+            background: rgba(232, 125, 125, 0.12);
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .speed-toggle {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            padding: 2px 0;
+            text-align: right;
+        }
+
+        .speed-toggle:hover {
+            color: var(--gold-bright);
+        }
+
+        .speed-panel {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px;
+            border: 1px dashed rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            background: rgba(212, 175, 55, 0.03);
+        }
+
+        .speed-panel.open {
+            display: flex;
+        }
+
+        .speed-btn-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+        }
+
+        .speed-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--text);
+            border: 1px solid rgba(212, 175, 55, 0.25);
+            border-radius: 10px;
+            padding: 9px 6px;
+            font-family: inherit;
+            font-size: 0.72rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .speed-btn:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        .speed-btn.pace-active {
+            color: #201900;
+            background: var(--gold-bright);
+            border-color: var(--gold-bright);
+            box-shadow: 0 0 0 2px rgba(246, 211, 101, 0.3);
+        }
+
+        .speed-custom-row {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+
+        .speed-custom-row input[type="number"] {
+            flex: 1;
+        }
+
+        .speed-custom-row select {
+            flex: 1;
+        }
+
+        .speed-custom-row .speed-btn {
+            flex: 0 0 auto;
+            padding: 9px 16px;
+        }
+
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(212, 175, 55, 0.35);
+            border-radius: 999px;
+        }
+
+        /* Small screens */
+        @media (max-width: 640px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 14px 14px 10px;
+            }
+
+            .header h1 {
+                font-size: 1.15rem;
+                letter-spacing: 2px;
+            }
+
+            .nav-tabs {
+                padding: 10px 10px 0;
+            }
+
+            .panel {
+                margin: 0 10px 10px;
+            }
+
+            .story-screen {
+                padding: 14px;
+            }
+
+            .custom-input-group {
+                flex-direction: column;
+            }
+
+            .submit-btn {
+                width: 100%;
+            }
+        }
+
+        /* Character creation overlay */
+        .creation-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background:
+                radial-gradient(circle at top, rgba(212, 175, 55, 0.08), transparent 40%),
+                linear-gradient(180deg, #030302 0%, #060504 45%, #020201 100%);
+        }
+
+        .creation-card {
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: linear-gradient(180deg, rgba(16, 13, 8, 0.98), rgba(6, 5, 4, 0.99));
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: var(--shadow);
+        }
+
+        .creation-title {
+            font-size: 1.15rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold-bright);
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .creation-subtitle {
+            font-size: 0.8rem;
+            color: var(--muted);
+            text-align: center;
+            margin: -12px 0 18px;
+        }
+
+        .summary-bio {
+            color: var(--text);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            padding: 14px;
+            border-left: 2px solid rgba(212, 175, 55, 0.6);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 0 10px 10px 0;
+            margin-bottom: 18px;
+        }
+
+        .summary-section {
+            margin-bottom: 16px;
+        }
+
+        .summary-section-label {
+            font-size: 0.72rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+        }
+
+        .summary-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .summary-stat-item {
+            border: 1px solid rgba(212, 175, 55, 0.14);
+            border-radius: 10px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .summary-stat-name {
+            font-size: 0.62rem;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .summary-stat-value {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .summary-line {
+            font-size: 0.86rem;
+            color: var(--text);
+            padding: 4px 0;
+        }
+
+        .summary-line strong {
+            color: var(--gold-bright);
+        }
+
+        .summary-empty {
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .summary-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .creation-choice {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .preset-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .preset-label {
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .preset-options {
+            display: flex;
+            gap: 6px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--muted);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 10px;
+            padding: 10px 6px;
+            font-family: inherit;
+            font-size: 0.78rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+        }
+
+        .preset-btn:hover {
+            border-color: rgba(212, 175, 55, 0.5);
+            color: var(--text);
+        }
+
+        .preset-btn.active {
+            color: #020402;
+            background: linear-gradient(180deg, #f6d365, #d4af37);
+            border-color: #f6d365;
+        }
+
+        .preset-hint {
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-align: center;
+            margin: -2px 0 4px;
+            min-height: 2.4em;
+        }
+
+        .custom-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 4px;
+        }
+
+        .custom-form label {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.74rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+        }
+
+        .custom-form textarea {
+            background: rgba(0, 0, 0, 0.62);
+            color: #ffffff;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.92rem;
+            border-radius: 12px;
+            outline: none;
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .custom-form textarea::placeholder {
+            color: #726a58;
+        }
+
+        .custom-form textarea:focus {
+            border-color: rgba(212, 175, 55, 0.75);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+        }
+
+        .cf-section-label {
+            font-size: 0.8rem;
+            color: var(--gold-bright);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: bold;
+            border-top: 1px solid rgba(212, 175, 55, 0.15);
+            padding-top: 14px;
+            margin-top: 4px;
+        }
+
+        .cf-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .cf-stat-grid label {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .relationship-card {
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+        }
+
+        .relationship-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .relationship-card-title {
+            font-size: 0.72rem;
+            color: var(--gold);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: bold;
+        }
+
+        .remove-relationship-btn {
+            background: none;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--muted);
+            border-radius: 8px;
+            padding: 3px 10px;
+            font-family: inherit;
+            font-size: 0.68rem;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .remove-relationship-btn:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            color: var(--text);
+        }
+
+        .add-relationship-btn {
+            background: none;
+            border: 1px dashed rgba(212, 175, 55, 0.4);
+            color: var(--gold-bright);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .add-relationship-btn:hover {
+            border-color: rgba(212, 175, 55, 0.7);
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .add-relationship-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .randomize-btn {
+            background: transparent;
+            color: var(--gold-bright);
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            padding: 12px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .randomize-btn:hover {
+            background: rgba(212, 175, 55, 0.08);
+        }
+
+        .randomize-btn:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+        .back-link {
+            background: none;
+            border: none;
+            color: var(--muted);
+            font-family: inherit;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            cursor: pointer;
+            padding: 4px 0;
+            text-align: left;
+        }
+
+        .back-link:hover {
+            color: var(--gold-bright);
+        }
+
+        /* Saves browser */
+        .saves-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .save-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(212, 175, 55, 0.18);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            cursor: pointer;
+            text-align: left;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+
+        .save-item:hover {
+            border-color: rgba(212, 175, 55, 0.55);
+            background: rgba(212, 175, 55, 0.06);
+        }
+
+        .save-item-name {
+            font-weight: bold;
+            font-size: 0.92rem;
+        }
+
+        .save-item-meta {
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .saves-empty {
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-align: center;
+            padding: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="creation-screen" class="creation-screen">
+        <div class="creation-card">
+            <h2 class="creation-title">Begin Your Life</h2>
+            <p class="creation-subtitle">Choose how your character comes into being.</p>
+
+            <div class="preset-picker">
+                <div class="preset-label">Difficulty & Tone</div>
+                <div class="preset-options">
+                    <button type="button" class="preset-btn" data-preset="gritty" onclick="selectPreset('gritty')">Gritty</button>
+                    <button type="button" class="preset-btn active" data-preset="standard" onclick="selectPreset('standard')">Standard</button>
+                    <button type="button" class="preset-btn" data-preset="forgiving" onclick="selectPreset('forgiving')">Forgiving</button>
+                </div>
+                <div id="preset-hint" class="preset-hint">Balanced difficulty and tone. No thumb on the scale either way.</div>
+            </div>
+
+            <div id="creation-choice" class="creation-choice">
+                <button class="submit-btn" id="continue-life-btn" onclick="continueLife()" style="display: none;">Continue Life</button>
+                <button class="submit-btn" id="random-character-btn" onclick="chooseRandom()">Random Character</button>
+                <button class="submit-btn" id="custom-character-btn" onclick="showCustomForm()">Custom Character</button>
+                <button class="secondary-btn" onclick="showSavesList()">Load Saved Game</button>
+            </div>
+
+            <div id="custom-form" class="custom-form" style="display: none;">
+                <button class="back-link" onclick="showChoiceButtons()">&larr; Back</button>
+
+                <button type="button" class="randomize-btn" id="randomize-btn" onclick="randomizeDraft()">Randomize (then edit)</button>
+
+                <label>Name
+                    <input type="text" id="cf-name" placeholder="Leave blank to let the AI decide">
+                </label>
+                <label>Age
+                    <input type="number" id="cf-age" placeholder="e.g. 25">
+                </label>
+                <label>Race
+                    <input type="text" id="cf-race" placeholder="e.g. Irish American">
+                </label>
+                <label>Starting Year
+                    <input type="number" id="cf-year" placeholder="e.g. 2026">
+                </label>
+                <label>Location
+                    <input type="text" id="cf-location" placeholder="e.g. Detroit, MI">
+                </label>
+                <label>Occupation
+                    <input type="text" id="cf-occupation" placeholder="e.g. Line cook">
+                </label>
+                <label>Background
+                    <textarea id="cf-background" placeholder="Backstory, upbringing, how they got here..."></textarea>
+                </label>
+
+                <div class="cf-section-label">Stats (0-20)</div>
+                <div class="cf-stat-grid">
+                    <label>Health
+                        <input type="number" id="cf-health" min="0" max="20" placeholder="10">
+                    </label>
+                    <label>Strength
+                        <input type="number" id="cf-strength" min="0" max="20" placeholder="10">
+                    </label>
+                    <label>Charisma
+                        <input type="number" id="cf-charisma" min="0" max="20" placeholder="10">
+                    </label>
+                    <label>Intelligence
+                        <input type="number" id="cf-intelligence" min="0" max="20" placeholder="10">
+                    </label>
+                    <label>Willpower
+                        <input type="number" id="cf-willpower" min="0" max="20" placeholder="10">
+                    </label>
+                    <label>Stress
+                        <input type="number" id="cf-stress" min="0" max="20" placeholder="0">
+                    </label>
+                </div>
+
+                <div class="cf-section-label">Inventory</div>
+                <label>Starting Items (comma-separated)
+                    <input type="text" id="cf-inventory" placeholder="e.g. Pocket knife, Old photograph, Bus pass">
+                </label>
+
+                <div class="cf-section-label">Starting Expense (optional)</div>
+                <label>Name
+                    <input type="text" id="cf-expense-name" placeholder="e.g. Rent">
+                </label>
+                <div class="cf-stat-grid">
+                    <label>Amount
+                        <input type="number" id="cf-expense-amount" min="0" step="0.01" placeholder="e.g. 650">
+                    </label>
+                    <label>Frequency
+                        <select id="cf-expense-frequency">
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Biweekly</option>
+                            <option value="monthly" selected>Monthly</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="cf-section-label">Relationships (up to 3)</div>
+                <div id="relationship-cards"></div>
+                <button type="button" class="add-relationship-btn" id="add-relationship-btn" onclick="addRelationshipCard()">+ Add Relationship</button>
+
+                <button class="submit-btn" onclick="submitCustom()">Begin</button>
+            </div>
+
+            <div id="saves-form" style="display: none;">
+                <button class="back-link" onclick="showChoiceButtons()">&larr; Back</button>
+                <div id="saves-list" class="saves-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="summary-screen" class="creation-screen" style="display: none;">
+        <div class="creation-card">
+            <h2 class="creation-title">Your Life Begins</h2>
+            <p class="creation-subtitle">Review your character before stepping into the story.</p>
+
+            <div id="summary-bio" class="summary-bio">Loading...</div>
+
+            <div class="summary-section">
+                <div class="summary-section-label">Overview</div>
+                <div id="summary-overview"></div>
+            </div>
+
+            <div class="summary-section">
+                <div class="summary-section-label">Stats</div>
+                <div id="summary-stats" class="summary-stat-grid"></div>
+            </div>
+
+            <div class="summary-section">
+                <div class="summary-section-label">Inventory</div>
+                <div id="summary-inventory"></div>
+            </div>
+
+            <div class="summary-section">
+                <div class="summary-section-label">Relationships</div>
+                <div id="summary-relationships"></div>
+            </div>
+
+            <div class="summary-section">
+                <div class="summary-section-label">Expenses</div>
+                <div id="summary-expenses"></div>
+            </div>
+
+            <div class="summary-actions">
+                <button class="submit-btn" onclick="proceedFromSummary()">Next</button>
+                <button class="secondary-btn" onclick="restartFromSummary()">Restart</button>
+            </div>
+        </div>
+    </div>
+    <div class="app-shell">
+        <div class="header">
+            <div class="header-top">
+                <h1 class="app-title" onclick="openMenu()">LifeSim</h1>
+                <span id="header-cash" class="cash-pill">$0</span>
+            </div>
+            <div id="character-meta" class="character-meta">Loading character data...</div>
+        </div>
+
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('story-panel', this)">Narrative</button>
+            <button class="tab-btn" onclick="switchTab('stats-panel', this)">Stats & Mods</button>
+            <button class="tab-btn" onclick="switchTab('relationships-panel', this)">Relationships</button>
+            <button class="tab-btn" onclick="switchTab('inventory-panel', this)">Inventory</button>
+            <button class="tab-btn" onclick="switchTab('events-panel', this)">Events</button>
+        </div>
+
+        <div id="story-panel" class="panel active">
+            <div class="story-screen">
+                <div class="scene-title">Current scene</div>
+                <div id="story-feed" class="story-feed">
+                    <div class="narrative-block">Initializing engine state...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="stats-panel" class="panel">
+            <div class="data-section">
+                <h3>Core Stats (0–20 Scale)</h3>
+                <div id="stats-grid" class="stat-grid"></div>
+            </div>
+            <div class="data-section">
+                <h3>Status Flags & Conditions</h3>
+                <div id="status-flags-list">None</div>
+            </div>
+        </div>
+
+        <div id="relationships-panel" class="panel">
+            <div class="data-section">
+                <h3>Known Acquaintances & Connections</h3>
+                <div id="relationships-list">No relationships formed yet.</div>
+            </div>
+        </div>
+
+        <div id="inventory-panel" class="panel">
+            <div class="data-section">
+                <h3>Possessions & Items</h3>
+                <div id="inventory-list">Inventory is empty.</div>
+            </div>
+        </div>
+
+        <div id="events-panel" class="panel">
+            <div class="data-section">
+                <h3>Life History Log</h3>
+                <div id="events-list">No recorded life events.</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div id="choices-container" class="choices-container"></div>
+
+            <div class="toggle-row">
+                <button type="button" class="cheat-toggle" onclick="toggleCheatPanel()">⚙ Cheats</button>
+                <button type="button" class="speed-toggle" onclick="toggleSpeedPanel()">⏱ Speed</button>
+            </div>
+
+            <div id="cheat-panel" class="cheat-panel">
+                <div class="cheat-panel-label">Lock dice outcome (applies to every roll until turned off)</div>
+                <div class="cheat-btn-row">
+                    <button type="button" class="cheat-btn great-success" data-outcome="Great Success" onclick="toggleCheatLock('Great Success')">Great Success</button>
+                    <button type="button" class="cheat-btn success" data-outcome="Success" onclick="toggleCheatLock('Success')">Success</button>
+                    <button type="button" class="cheat-btn partial" data-outcome="Partial Success" onclick="toggleCheatLock('Partial Success')">Partial</button>
+                    <button type="button" class="cheat-btn fail" data-outcome="Fail" onclick="toggleCheatLock('Fail')">Fail</button>
+                    <button type="button" class="cheat-btn crit-fail" data-outcome="Critical Fail" onclick="toggleCheatLock('Critical Fail')">Crit Fail</button>
+                </div>
+                <div id="cheat-lock-status" class="cheat-lock-status" style="display: none;">
+                    Locked to <strong id="cheat-lock-label"></strong> - every roll forced until you tap it again or hit Off.
+                    <button type="button" class="cheat-off-btn" onclick="clearCheatLock()">Turn Off</button>
+                </div>
+            </div>
+
+            <div id="speed-panel" class="speed-panel">
+                <div class="cheat-panel-label">Set ongoing pace (stays active until changed)</div>
+                <div class="speed-btn-row">
+                    <button type="button" class="speed-btn" data-speed="h" onclick="setPersistentSpeed('h')">Hour</button>
+                    <button type="button" class="speed-btn" data-speed="d" onclick="setPersistentSpeed('d')">Day</button>
+                    <button type="button" class="speed-btn" data-speed="w" onclick="setPersistentSpeed('w')">Week</button>
+                    <button type="button" class="speed-btn" data-speed="m" onclick="setPersistentSpeed('m')">Month</button>
+                    <button type="button" class="speed-btn" data-speed="y" onclick="setPersistentSpeed('y')">Year</button>
+                </div>
+
+                <div class="cheat-panel-label" style="margin-top: 6px;">One-time jump (does not change ongoing pace)</div>
+                <div class="speed-custom-row">
+                    <input type="number" id="speed-custom-amount" min="1" placeholder="Amount">
+                    <select id="speed-custom-unit">
+                        <option value="h">Hours</option>
+                        <option value="d">Days</option>
+                        <option value="w">Weeks</option>
+                        <option value="m">Months</option>
+                        <option value="y">Years</option>
+                    </select>
+                    <button type="button" class="speed-btn" onclick="fireCustomTimeSkip()">Go</button>
+                </div>
+            </div>
+
+            <div class="custom-input-group">
+                <input type="text" id="custom-action" placeholder="Type custom action..." onkeydown="handleKeyPress(event)">
+                <button class="submit-btn" onclick="sendCustomAction()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cachedState = null;
+        let currentSaveId = null;
+        let selectedPreset = 'standard';
+
+        const PRESET_HINTS = {
+            gritty: 'Higher stakes, harder rolls, consequences land more often. Closer to hardboiled crime fiction.',
+            standard: 'Balanced difficulty and tone. No thumb on the scale either way.',
+            forgiving: 'More room to recover from failure. A bit more warmth alongside the realism.',
+        };
+
+        function selectPreset(preset) {
+            selectedPreset = preset;
+            document.querySelectorAll('.preset-btn').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.preset === preset);
+            });
+            document.getElementById('preset-hint').textContent = PRESET_HINTS[preset] || '';
+        }
+
+        function rememberSaveId(saveId) {
+            currentSaveId = saveId;
+            if (saveId) {
+                try { localStorage.setItem('lifesim_last_save_id', saveId); } catch (err) { /* ignore */ }
+            }
+        }
+
+        function getRememberedSaveId() {
+            try { return localStorage.getItem('lifesim_last_save_id'); } catch (err) { return null; }
+        }
+
+        window.onload = () => {
+            tryResumeOrShowCreation();
+        };
+
+        // On load: if this browser already has an active server-side session
+        // (survives a plain refresh), resume it silently instead of showing
+        // the creation screen. Otherwise offer Continue Life if a save_id is
+        // remembered locally, plus the normal creation options.
+        async function tryResumeOrShowCreation() {
+            try {
+                const response = await fetch('/api/resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    rememberSaveId(data.save_id || null);
+                    document.getElementById('creation-screen').style.display = 'none';
+                    updateUIState(data.player_state);
+                    gameInProgress = true;
+                    return;
+                }
+            } catch (err) {
+                console.error('Resume check failed:', err);
+            }
+
+            const lastSaveId = getRememberedSaveId();
+            if (lastSaveId) {
+                document.getElementById('continue-life-btn').style.display = 'block';
+            }
+        }
+
+        function switchTab(panelId, btnElement) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        function getStoryFeed() {
+            return document.getElementById('story-feed');
+        }
+
+        function beginScene(actionText = '') {
+            const feed = getStoryFeed();
+            feed.innerHTML = '';
+
+            if (actionText) {
+                const actionBlock = document.createElement('div');
+                actionBlock.className = 'user-action-block';
+                actionBlock.textContent = `> ${actionText}`;
+                feed.appendChild(actionBlock);
+            }
+        }
+
+        // Holds the opening narration/state from the most recent startNewGame
+        // call until the player taps Next on the summary screen.
+        let pendingOpeningScene = null;
+
+        async function startNewGame(payload = {}) {
+            try {
+                const response = await fetch('/api/new-game', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await response.json();
+
+                currentSaveId = data.save_id || null;
+                rememberSaveId(currentSaveId);
+                gameInProgress = true;
+
+                pendingOpeningScene = data;
+                showSummaryScreen(data);
+            } catch (err) {
+                console.error('Failed to start game:', err);
+                setStory('Error initializing game engine.');
+            }
+        }
+
+        function showSummaryScreen(data) {
+            document.getElementById('creation-screen').style.display = 'none';
+            document.getElementById('summary-screen').style.display = 'flex';
+
+            const state = data.player_state || {};
+            const bioText = data.bio || 'No background available.';
+            document.getElementById('summary-bio').textContent = bioText;
+
+            const overviewLines = [
+                ['Name / Age', state.header || ''],
+                ['Location', state.location || 'Unknown'],
+                ['Race', state.race || 'Not specified'],
+                ['Occupation', state.occupation || 'Unemployed'],
+                ['Cash', `$${state.cash ?? 0}`],
+            ];
+            document.getElementById('summary-overview').innerHTML = overviewLines
+                .map(([label, val]) => `<div class="summary-line"><strong>${label}:</strong> ${val}</div>`)
+                .join('');
+
+            const statsGrid = document.getElementById('summary-stats');
+            statsGrid.innerHTML = '';
+            if (state.stats) {
+                for (const [stat, val] of Object.entries(state.stats)) {
+                    const item = document.createElement('div');
+                    item.className = 'summary-stat-item';
+                    item.innerHTML = `<div class="summary-stat-name">${stat}</div><div class="summary-stat-value">${val}</div>`;
+                    statsGrid.appendChild(item);
+                }
+            }
+
+            const invEl = document.getElementById('summary-inventory');
+            invEl.innerHTML = (state.inventory && state.inventory.length > 0)
+                ? state.inventory.map((i) => `<div class="summary-line">• ${i}</div>`).join('')
+                : '<div class="summary-empty">Nothing to start with.</div>';
+
+            const relEl = document.getElementById('summary-relationships');
+            const relEntries = state.relationships ? Object.entries(state.relationships) : [];
+            relEl.innerHTML = relEntries.length > 0
+                ? relEntries.map(([name, info]) => `<div class="summary-line"><strong>${name}</strong> (${info.relation || 'Acquaintance'})</div>`).join('')
+                : '<div class="summary-empty">No established relationships yet.</div>';
+
+            const expEl = document.getElementById('summary-expenses');
+            expEl.innerHTML = (state.expenses && state.expenses.length > 0)
+                ? state.expenses.map((e) => `<div class="summary-line"><strong>${e.name}:</strong> $${e.amount} / ${e.frequency}</div>`).join('')
+                : '<div class="summary-empty">No recurring expenses.</div>';
+        }
+
+        function proceedFromSummary() {
+            if (!pendingOpeningScene) return;
+            const data = pendingOpeningScene;
+            pendingOpeningScene = null;
+
+            document.getElementById('summary-screen').style.display = 'none';
+
+            if (data.player_state) {
+                updateUIState(data.player_state);
+            }
+            if (data.narration) {
+                if (data.narration.narrative) {
+                    setStory(data.narration.narrative);
+                }
+                if (data.narration.choices) {
+                    renderChoices(data.narration.choices);
+                }
+            }
+        }
+
+        function restartFromSummary() {
+            pendingOpeningScene = null;
+            document.getElementById('summary-screen').style.display = 'none';
+            document.getElementById('creation-screen').style.display = 'flex';
+            showChoiceButtons();
+        }
+
+        function chooseRandom() {
+            document.getElementById('creation-screen').style.display = 'none';
+            startNewGame({ mode: 'random', difficulty_preset: selectedPreset });
+        }
+
+        function showCustomForm() {
+            document.getElementById('creation-choice').style.display = 'none';
+            document.getElementById('custom-form').style.display = 'flex';
+        }
+
+        function showChoiceButtons() {
+            document.getElementById('custom-form').style.display = 'none';
+            document.getElementById('saves-form').style.display = 'none';
+            document.getElementById('creation-choice').style.display = 'flex';
+        }
+
+        // --- Relationship cards (up to 3) ---
+
+        let relationshipCardCount = 0;
+        const MAX_RELATIONSHIPS = 3;
+
+        function addRelationshipCard(prefill = null) {
+            if (relationshipCardCount >= MAX_RELATIONSHIPS) return;
+            relationshipCardCount += 1;
+            const cardId = `rel-card-${Date.now()}-${relationshipCardCount}`;
+
+            const container = document.getElementById('relationship-cards');
+            const card = document.createElement('div');
+            card.className = 'relationship-card';
+            card.id = cardId;
+            card.innerHTML = `
+                <div class="relationship-card-header">
+                    <span class="relationship-card-title">Relationship ${relationshipCardCount}</span>
+                    <button type="button" class="remove-relationship-btn" onclick="removeRelationshipCard('${cardId}')">Remove</button>
+                </div>
+                <label>Name
+                    <input type="text" class="rel-name" placeholder="e.g. Willie Mae" value="${prefill?.name ?? ''}">
+                </label>
+                <label>Relationship
+                    <input type="text" class="rel-relation" placeholder="e.g. Mother, Boss, Friend" value="${prefill?.relation ?? ''}">
+                </label>
+                <label>Background
+                    <input type="text" class="rel-background" placeholder="Short note, e.g. Worried about your rent" value="${prefill?.background ?? ''}">
+                </label>
+            `;
+            container.appendChild(card);
+            updateAddRelationshipButton();
+        }
+
+        function removeRelationshipCard(cardId) {
+            const card = document.getElementById(cardId);
+            if (card) card.remove();
+            relationshipCardCount -= 1;
+            updateAddRelationshipButton();
+        }
+
+        function clearRelationshipCards() {
+            document.getElementById('relationship-cards').innerHTML = '';
+            relationshipCardCount = 0;
+            updateAddRelationshipButton();
+        }
+
+        function updateAddRelationshipButton() {
+            const btn = document.getElementById('add-relationship-btn');
+            btn.disabled = relationshipCardCount >= MAX_RELATIONSHIPS;
+            btn.textContent = relationshipCardCount >= MAX_RELATIONSHIPS
+                ? 'Maximum 3 relationships'
+                : '+ Add Relationship';
+        }
+
+        function collectRelationshipsFromForm() {
+            const relationships = {};
+            document.querySelectorAll('.relationship-card').forEach((card) => {
+                const name = card.querySelector('.rel-name').value.trim();
+                if (!name) return;
+                relationships[name] = {
+                    relation: card.querySelector('.rel-relation').value.trim() || 'Acquaintance',
+                    background: card.querySelector('.rel-background').value.trim(),
+                    status: card.querySelector('.rel-background').value.trim() || 'Neutral',
+                };
+            });
+            return relationships;
+        }
+
+        // --- Randomize then edit ---
+
+        async function randomizeDraft() {
+            const btn = document.getElementById('randomize-btn');
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/api/generate-draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}),
+                });
+                const data = await response.json();
+
+                if (data.error || !data.draft) {
+                    btn.textContent = 'Could not generate, try again';
+                    btn.disabled = false;
+                    return;
+                }
+
+                const draft = data.draft;
+                document.getElementById('cf-name').value = draft.name || '';
+                document.getElementById('cf-age').value = draft.age ?? '';
+                document.getElementById('cf-race').value = draft.race || '';
+                document.getElementById('cf-year').value = draft.year ?? '';
+                document.getElementById('cf-location').value = draft.location || '';
+                document.getElementById('cf-occupation').value = draft.occupation || '';
+                document.getElementById('cf-background').value = draft.background || '';
+                document.getElementById('cf-health').value = draft.health ?? '';
+                document.getElementById('cf-strength').value = draft.strength ?? '';
+                document.getElementById('cf-charisma').value = draft.charisma ?? '';
+                document.getElementById('cf-intelligence').value = draft.intelligence ?? '';
+                document.getElementById('cf-willpower').value = draft.willpower ?? '';
+                document.getElementById('cf-stress').value = draft.stress ?? '';
+                document.getElementById('cf-inventory').value = Array.isArray(draft.inventory) ? draft.inventory.join(', ') : '';
+
+                const firstExpense = Array.isArray(draft.expenses) && draft.expenses.length > 0 ? draft.expenses[0] : null;
+                document.getElementById('cf-expense-name').value = firstExpense?.name || '';
+                document.getElementById('cf-expense-amount').value = firstExpense?.amount ?? '';
+                document.getElementById('cf-expense-frequency').value = firstExpense?.frequency || 'monthly';
+
+                clearRelationshipCards();
+                if (draft.relationships && typeof draft.relationships === 'object') {
+                    Object.entries(draft.relationships).slice(0, MAX_RELATIONSHIPS).forEach(([name, info]) => {
+                        addRelationshipCard({
+                            name,
+                            relation: info.relation || '',
+                            background: info.status || info.background || '',
+                        });
+                    });
+                }
+
+                btn.textContent = 'Randomize (then edit)';
+                btn.disabled = false;
+            } catch (err) {
+                console.error('Failed to generate draft:', err);
+                btn.textContent = 'Connection error, try again';
+                btn.disabled = false;
+            }
+        }
+
+        function submitCustom() {
+            const getVal = (id) => document.getElementById(id).value.trim();
+            const getNum = (id, fallback) => {
+                const raw = getVal(id);
+                return raw === '' ? fallback : parseInt(raw, 10);
+            };
+            const getFloat = (id, fallback) => {
+                const raw = getVal(id);
+                return raw === '' ? fallback : parseFloat(raw);
+            };
+            // Stats specifically are clamped to 0-20 client-side too, so a
+            // typed or pasted out-of-range value (the number input's min/max
+            // attributes don't actually block manual entry) is corrected
+            // before it's even sent, not just silently fixed server-side.
+            const getStat = (id, fallback) => {
+                const raw = getVal(id);
+                if (raw === '') return fallback;
+                const parsed = parseInt(raw, 10);
+                if (Number.isNaN(parsed)) return fallback;
+                return Math.max(0, Math.min(20, parsed));
+            };
+
+            const inventoryRaw = getVal('cf-inventory');
+            const inventory = inventoryRaw
+                ? inventoryRaw.split(',').map((s) => s.trim()).filter(Boolean)
+                : [];
+
+            const expenseName = getVal('cf-expense-name');
+            const expenseAmount = getFloat('cf-expense-amount', 0);
+
+            const payload = {
+                mode: 'manual',
+                difficulty_preset: selectedPreset,
+                name: getVal('cf-name') || undefined,
+                age: getNum('cf-age', undefined),
+                race: getVal('cf-race') || undefined,
+                year: getNum('cf-year', undefined),
+                location: getVal('cf-location') || undefined,
+                occupation: getVal('cf-occupation') || undefined,
+                background: getVal('cf-background') || undefined,
+                health: getStat('cf-health', undefined),
+                strength: getStat('cf-strength', undefined),
+                charisma: getStat('cf-charisma', undefined),
+                intelligence: getStat('cf-intelligence', undefined),
+                willpower: getStat('cf-willpower', undefined),
+                stress: getStat('cf-stress', undefined),
+                inventory: inventory.length ? inventory : undefined,
+                relationships: Object.keys(collectRelationshipsFromForm()).length ? collectRelationshipsFromForm() : undefined,
+                expense_name: (expenseName && expenseAmount > 0) ? expenseName : undefined,
+                expense_amount: (expenseName && expenseAmount > 0) ? expenseAmount : undefined,
+                expense_frequency: (expenseName && expenseAmount > 0) ? getVal('cf-expense-frequency') : undefined,
+            };
+
+            document.getElementById('creation-screen').style.display = 'none';
+            startNewGame(payload);
+        }
+
+        // --- Save / Load ---
+
+        let gameInProgress = false;
+
+        function openMenu() {
+            document.getElementById('creation-screen').style.display = 'flex';
+            showChoiceButtons();
+
+            const continueBtn = document.getElementById('continue-life-btn');
+            const randomBtn = document.getElementById('random-character-btn');
+            const customBtn = document.getElementById('custom-character-btn');
+
+            if (gameInProgress) {
+                continueBtn.style.display = 'block';
+                continueBtn.textContent = 'Back to Game';
+                randomBtn.textContent = 'Start a New Life';
+                customBtn.textContent = 'Start a Custom New Life';
+            } else {
+                continueBtn.style.display = getRememberedSaveId() ? 'block' : 'none';
+                continueBtn.textContent = 'Continue Life';
+                randomBtn.textContent = 'Random Character';
+                customBtn.textContent = 'Custom Character';
+            }
+        }
+
+        function closeMenu() {
+            document.getElementById('creation-screen').style.display = 'none';
+        }
+
+        function continueLife() {
+            // A game is already live client-side (the player just tapped the
+            // title to peek at the menu) - nothing was lost, so just close
+            // the menu instead of firing an unnecessary resume/narration call.
+            if (gameInProgress) {
+                closeMenu();
+                return;
+            }
+
+            const saveId = getRememberedSaveId();
+            if (!saveId) return;
+            resumeSave(saveId);
+        }
+
+        async function showSavesList() {
+            document.getElementById('creation-choice').style.display = 'none';
+            document.getElementById('saves-form').style.display = 'block';
+
+            const list = document.getElementById('saves-list');
+            list.innerHTML = '<div class="saves-empty">Loading saves...</div>';
+
+            try {
+                const response = await fetch('/api/saves');
+                const data = await response.json();
+                const saves = data.saves || [];
+
+                if (saves.length === 0) {
+                    list.innerHTML = '<div class="saves-empty">No saved playthroughs yet.</div>';
+                    return;
+                }
+
+                list.innerHTML = '';
+                saves.forEach((save) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'save-item';
+                    const when = new Date(save.updated_at).toLocaleString();
+                    btn.innerHTML = `
+                        <div>
+                            <div class="save-item-name">${save.name}</div>
+                            <div class="save-item-meta">Age ${save.age ?? '?'} &middot; ${save.location || 'Unknown'} &middot; ${when}</div>
+                        </div>
+                    `;
+                    btn.onclick = () => resumeSave(save.save_id);
+                    list.appendChild(btn);
+                });
+            } catch (err) {
+                console.error('Failed to load saves list:', err);
+                list.innerHTML = '<div class="saves-empty">Could not load saves.</div>';
+            }
+        }
+
+        // Wraps fetch with a hard timeout, since a hung request (e.g. a slow
+        // or unresponsive AI call) previously left the player staring at a
+        // static "Picking up where you left off..." message forever with no
+        // way to tell a real hang apart from normal loading time.
+        async function fetchWithTimeout(url, options, timeoutMs = 25000) {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                return await fetch(url, { ...options, signal: controller.signal });
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
+        async function resumeSave(saveId) {
+            document.getElementById('creation-screen').style.display = 'none';
+            setStory('Loading your save...');
+            renderChoices([]);
+
+            try {
+                const response = await fetchWithTimeout('/api/resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ save_id: saveId }),
+                }, 15000);
+
+                if (!response.ok) {
+                    let message = `Could not load that save (server said: ${response.status}).`;
+                    try {
+                        const errData = await response.json();
+                        if (errData.error) message = errData.error;
+                    } catch (parseErr) { /* body wasn't JSON, keep default message */ }
+
+                    setStory(message);
+                    renderChoices(['Try again', 'Back to start']);
+                    const btns = document.getElementById('choices-container').querySelectorAll('.choice-btn');
+                    btns[0].onclick = () => resumeSave(saveId);
+                    btns[1].onclick = () => { document.getElementById('creation-screen').style.display = 'flex'; showChoiceButtons(); };
+                    return;
+                }
+
+                const data = await response.json();
+                rememberSaveId(data.save_id || saveId);
+                updateUIState(data.player_state);
+                gameInProgress = true;
+
+                // Generate an actual continuation scene rather than leaving the
+                // player on a static placeholder with no choices to act on.
+                // This is a real AI call and can genuinely take a while, so the
+                // status text changes here to make clear it's still working,
+                // not stuck - and it gets its own timeout with a real retry
+                // path rather than hanging indefinitely.
+                setStory('Picking up where you left off...');
+
+                let continueData;
+                try {
+                    const continueResponse = await fetchWithTimeout('/api/action', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: '$Resume the story from exactly where this session left off. Briefly reorient the player, then continue.$' }),
+                    }, 30000);
+                    continueData = await continueResponse.json();
+                } catch (continueErr) {
+                    console.error('Continuation scene failed or timed out:', continueErr);
+                    setStory("You're back in. (Couldn't generate a fresh scene right now, but your save loaded fine.)");
+                    renderChoices(['Continue']);
+                    document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                        sendAction('Continue where I left off.');
+                    };
+                    return;
+                }
+
+                if (continueData.error) {
+                    setStory('Welcome back. (Could not generate a fresh scene: ' + continueData.error + ')');
+                    renderChoices(['Continue']);
+                    document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                        sendAction('Continue where I left off.');
+                    };
+                    return;
+                }
+
+                if (continueData.narration) {
+                    if (continueData.narration.narrative) {
+                        setStory(continueData.narration.narrative);
+                    }
+                    if (continueData.narration.choices && continueData.narration.choices.length > 0) {
+                        renderChoices(continueData.narration.choices);
+                    } else {
+                        // Never leave the player with zero choices and no input path.
+                        renderChoices(['Continue']);
+                        document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                            sendAction('Continue where I left off.');
+                        };
+                    }
+                }
+                if (continueData.player_state) {
+                    updateUIState(continueData.player_state);
+                }
+            } catch (err) {
+                console.error('Failed to resume save:', err);
+                const timedOut = err.name === 'AbortError';
+                setStory(timedOut ? 'Loading timed out. Your save may still be fine, worth trying again.' : 'Connection error while loading your save.');
+                renderChoices(['Try again']);
+                document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => resumeSave(saveId);
+            }
+        }
+
+        // Mirrors app.py's detection: $...$ (commands/overrides) and ?...?
+        // (questions) are superuser turns that should NOT clear the existing
+        // scene - only normal in-fiction actions replace what's on screen.
+        function isSuperuserAction(text) {
+            const trimmed = text.trim();
+            return (trimmed.startsWith('$') && trimmed.endsWith('$') && trimmed.length > 1) ||
+                   (trimmed.startsWith('?') && trimmed.endsWith('?') && trimmed.length > 1);
+        }
+
+        async function sendAction(actionText) {
+            if (!actionText.trim()) return;
+
+            const isSuperuser = isSuperuserAction(actionText);
+
+            if (isSuperuser) {
+                // Leave the existing scene and choices in place; just show
+                // what was typed as a distinct out-of-character line above
+                // the acknowledgment that's about to be appended.
+                const feed = getStoryFeed();
+                const actionBlock = document.createElement('div');
+                actionBlock.className = 'user-action-block';
+                actionBlock.textContent = `> ${actionText}`;
+                feed.appendChild(actionBlock);
+            } else {
+                renderChoices([]);
+                beginScene(actionText);
+            }
+
+            try {
+                const requestBody = { action: actionText };
+                // A cheat lock only applies to normal actions - a $...$/?...?
+                // superuser turn already bypasses dice resolution entirely,
+                // so there's nothing for the lock to override on those.
+                if (!isSuperuser && cheatLockOutcome) {
+                    requestBody.locked_outcome = cheatLockOutcome;
+                }
+
+                const response = await fetch('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    appendStory(`[Error: ${data.error}]`);
+                    return;
+                }
+
+                if (data.dice_outcome && data.dice_outcome.roll !== undefined) {
+                    renderDiceOutcome(data.dice_outcome);
+                } else if (data.dice_outcome && data.dice_outcome.locked) {
+                    renderLockedOutcome(data.dice_outcome);
+                }
+
+                if (data.narration) {
+                    if (data.narration.narrative) {
+                        appendStory(data.narration.narrative, 'narrative');
+                    }
+                    // A pure question doesn't change the scene, so the choices
+                    // the player was already looking at are still valid - only
+                    // replace them if the server actually sent new ones.
+                    if (data.narration.choices && data.narration.choices.length > 0) {
+                        renderChoices(data.narration.choices);
+                    }
+                }
+
+                if (data.player_state) {
+                    updateUIState(data.player_state);
+                }
+            } catch (err) {
+                console.error('Failed to perform action:', err);
+                appendStory('[Connection error. Please try again.]');
+            }
+        }
+
+        function sendCustomAction() {
+            const input = document.getElementById('custom-action');
+            const actionText = input.value;
+            if (actionText.trim()) {
+                sendAction(actionText);
+                input.value = '';
+            }
+        }
+
+        function toggleCheatPanel() {
+            document.getElementById('cheat-panel').classList.toggle('open');
+        }
+
+        // Client-side only, per the design: resets on page reload rather
+        // than persisting to the server/save, so a forgotten lock can never
+        // silently survive into a totally different session.
+        let cheatLockOutcome = null;
+
+        function toggleCheatLock(outcome) {
+            if (cheatLockOutcome === outcome) {
+                clearCheatLock();
+                return;
+            }
+            cheatLockOutcome = outcome;
+            updateCheatLockUI();
+        }
+
+        function clearCheatLock() {
+            cheatLockOutcome = null;
+            updateCheatLockUI();
+        }
+
+        function updateCheatLockUI() {
+            document.querySelectorAll('.cheat-btn').forEach((btn) => {
+                btn.classList.toggle('locked-active', btn.dataset.outcome === cheatLockOutcome);
+            });
+            const statusEl = document.getElementById('cheat-lock-status');
+            const labelEl = document.getElementById('cheat-lock-label');
+            if (cheatLockOutcome) {
+                statusEl.style.display = 'flex';
+                labelEl.textContent = cheatLockOutcome;
+            } else {
+                statusEl.style.display = 'none';
+            }
+        }
+
+        function toggleSpeedPanel() {
+            document.getElementById('speed-panel').classList.toggle('open');
+        }
+
+        function fireTimeSkip(unit, amount) {
+            // Reuses the exact same &Nunit syntax the text box already
+            // supports (parsed by TIME_SKIP_PATTERN in app.py), so this is
+            // the same tested time-skip path, not new backend logic. This is
+            // the ONE-TIME jump path only - it does not touch sim_speed.
+            sendAction(`&${amount}${unit}`);
+        }
+
+        async function setPersistentSpeed(speed) {
+            // Sets the ongoing pace the game defaults to on every undirected
+            // turn from now on, until changed again - genuinely different
+            // from fireTimeSkip, which only jumps forward once. This hits a
+            // dedicated endpoint with no AI call and no narrated scene, since
+            // changing a setting shouldn't itself cost anything or advance
+            // the story.
+            try {
+                const response = await fetch('/api/set-speed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ speed }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('Failed to set speed:', data.error);
+                    return;
+                }
+                updatePaceButtons(speed);
+            } catch (err) {
+                console.error('Failed to set speed:', err);
+            }
+        }
+
+        function updatePaceButtons(activeSpeed) {
+            document.querySelectorAll('.speed-btn[data-speed]').forEach((btn) => {
+                btn.classList.toggle('pace-active', btn.dataset.speed === activeSpeed);
+            });
+        }
+
+        function fireCustomTimeSkip() {
+            const amountInput = document.getElementById('speed-custom-amount');
+            const unit = document.getElementById('speed-custom-unit').value;
+            const raw = amountInput.value.trim();
+            const amount = parseInt(raw, 10);
+
+            if (raw === '' || Number.isNaN(amount) || amount < 1) {
+                amountInput.style.borderColor = 'rgba(232, 125, 125, 0.7)';
+                amountInput.placeholder = 'Enter a number \u2265 1';
+                setTimeout(() => { amountInput.style.borderColor = ''; }, 2000);
+                return;
+            }
+
+            fireTimeSkip(unit, amount);
+            amountInput.value = '';
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendCustomAction();
+            }
+        }
+
+        function setStory(text) {
+            const feed = getStoryFeed();
+            feed.innerHTML = '';
+
+            const block = document.createElement('div');
+            block.className = 'narrative-block';
+            block.textContent = text;
+            feed.appendChild(block);
+        }
+
+        function appendStory(text, type = 'narrative') {
+            const feed = getStoryFeed();
+            const newBlock = document.createElement('div');
+            newBlock.className = type === 'user' ? 'user-action-block' : 'narrative-block';
+            newBlock.textContent = text;
+            feed.appendChild(newBlock);
+            newBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderDiceOutcome(dice) {
+            const feed = getStoryFeed();
+            const badge = document.createElement('div');
+            badge.className = 'dice-badge';
+
+            const rollVal = dice.roll ?? 0;
+            const targetDC = dice.dc ?? 'N/A';
+            const outcomeStr = (dice.outcome || 'resolved').replace(/_/g, ' ');
+
+            badge.textContent = `[DICE ROLL: ${rollVal} vs DC ${targetDC} | OUTCOME: ${outcomeStr}]`;
+            feed.appendChild(badge);
+            badge.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderLockedOutcome(dice) {
+            const feed = getStoryFeed();
+            const badge = document.createElement('div');
+            badge.className = 'dice-badge';
+            const outcomeStr = (dice.outcome || 'resolved').replace(/_/g, ' ');
+            badge.textContent = `[\u{1F512} CHEAT LOCK | OUTCOME: ${outcomeStr}]`;
+            feed.appendChild(badge);
+            badge.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderChoices(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+
+            if (choices && choices.length > 0) {
+                choices.forEach((choice) => {
+                    const button = document.createElement('button');
+                    button.className = 'choice-btn';
+                    button.textContent = choice;
+                    button.onclick = () => sendAction(choice);
+                    container.appendChild(button);
+                });
+            }
+        }
+
+        function updateUIState(state) {
+            cachedState = state;
+
+            if (state.sim_speed) {
+                updatePaceButtons(state.sim_speed);
+            }
+
+            const metaEl = document.getElementById('character-meta');
+            const fullHeader = state.header || '';
+            // Drop Location from the compact header display - it was getting
+            // silently cut off on narrow screens. Full detail (including
+            // location) is still in the Stats tab and in the title tooltip.
+            const shortHeader = fullHeader.replace(/\s*\|\s*Location:[^|]*$/i, '');
+            metaEl.textContent = shortHeader;
+            metaEl.title = fullHeader;
+            document.getElementById('header-cash').textContent = `$${state.cash ?? 0}`;
+
+            const statsGrid = document.getElementById('stats-grid');
+            statsGrid.innerHTML = '';
+            if (state.stats) {
+                for (const [stat, val] of Object.entries(state.stats)) {
+                    const mod = Math.floor((val - 10) / 2);
+                    const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.innerHTML = `
+                        <div class="stat-name">${stat}</div>
+                        <div class="stat-value">${val} <span style="font-size: 0.8rem; color: var(--muted);">(${modStr})</span></div>
+                    `;
+                    statsGrid.appendChild(card);
+                }
+            }
+
+            const flagsList = document.getElementById('status-flags-list');
+            if (state.status_flags && state.status_flags.length > 0) {
+                flagsList.innerHTML = state.status_flags.map(f => `<div class="list-item">• ${f}</div>`).join('');
+            } else {
+                flagsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No active status flags.</div>`;
+            }
+
+            const relsList = document.getElementById('relationships-list');
+            if (state.relationships && Object.keys(state.relationships).length > 0) {
+                let html = '';
+                for (const [name, info] of Object.entries(state.relationships)) {
+                    const relType = info.relation || 'Acquaintance';
+                    const quality = info.quality ?? 10;
+                    html += `<div class="list-item"><strong>${name}</strong> (${relType}) — Quality: ${quality}/20</div>`;
+                }
+                relsList.innerHTML = html;
+            } else {
+                relsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No known relationships recorded.</div>`;
+            }
+
+            const invList = document.getElementById('inventory-list');
+            if (state.inventory && state.inventory.length > 0) {
+                invList.innerHTML = state.inventory.map(item => `<div class="list-item">• ${item}</div>`).join('');
+            } else {
+                invList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">Inventory is empty.</div>`;
+            }
+
+            const eventsList = document.getElementById('events-list');
+            if (state.life_events && state.life_events.length > 0) {
+                // Most recent first reads more naturally as a life-events log
+                const eventsInOrder = [...state.life_events].reverse();
+                eventsList.innerHTML = eventsInOrder.map(ev => {
+                    const monthStr = ev.month ? String(ev.month).padStart(2, '0') : null;
+                    const dateStr = monthStr && ev.year ? `${monthStr}/${ev.year}` : (ev.year ? String(ev.year) : 'Unknown date');
+                    const category = ev.category || 'Other';
+                    // Older entries predate the 'event' field name and used
+                    // plain strings; fall back gracefully instead of ever
+                    // interpolating a raw object into the page again.
+                    const description = typeof ev === 'string' ? ev : (ev.event || 'Unspecified event');
+                    return `<div class="list-item">${dateStr} - ${category} - ${description}</div>`;
+                }).join('');
+            } else {
+                eventsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No recorded life events.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -3,34 +3,42 @@ from typing import Any, Dict
 
 from Dice import resolve_check
 from Player import Player
-from Narrator import interpret_action, narrate_outcome
+from Narrator import interpret_action, narrate_outcome, generate_character
 
 
 def create_player() -> Player:
     print("Create your character")
-    name = input("Name: ").strip() or "Player"
-    age = int(input("Age: ").strip() or 25)
-    month = input("Month: ").strip() or "Jan"
-    year = int(input("Year: ").strip() or 2026)
-    location = input("Location: ").strip() or "Unknown"
+    mode = input("Random or Custom character? (random/custom): ").strip().lower() or "random"
+
+    try:
+        if mode.startswith("c"):
+            custom_prompt = input(
+                "Describe your character (era, location, age, background, stats, up to 3 relationships): "
+            ).strip()
+            data = generate_character(custom_prompt) if custom_prompt else generate_character()
+        else:
+            data = generate_character()
+    except Exception as exc:
+        print(f"Character generation failed, using defaults: {exc}")
+        data = {}
 
     return Player(
-        name=name,
-        age=age,
-        month=month,
-        year=year,
-        location=location,
-        health=int(input("Health: ").strip() or 70),
-        strength=int(input("Strength: ").strip() or 50),
-        charisma=int(input("Charisma: ").strip() or 50),
-        intelligence=int(input("Intelligence: ").strip() or 50),
-        willpower=int(input("Willpower: ").strip() or 50),
-        stress=int(input("Stress: ").strip() or 30),
-        cash=float(input("Cash: ").strip() or 1000.0),
-        occupation=input("Occupation: ").strip() or "",
-        background=input("Background: ").strip() or "",
+        name=data.get("name", "Player"),
+        age=int(data.get("age", 25)),
+        month=data.get("month", "Jan"),
+        year=int(data.get("year", 2026)),
+        location=data.get("location", "Unknown"),
+        health=int(data.get("health", 10)),
+        strength=int(data.get("strength", 10)),
+        charisma=int(data.get("charisma", 10)),
+        intelligence=int(data.get("intelligence", 10)),
+        willpower=int(data.get("willpower", 10)),
+        stress=int(data.get("stress", 0)),
+        cash=float(data.get("cash", 1000.0)),
+        occupation=data.get("occupation", ""),
+        background=data.get("background", ""),
+        relationships=data.get("relationships", {}),
     )
-
 
 def main() -> None:
     print("LifeSim")

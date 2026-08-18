@@ -6,7 +6,7 @@
     <title>LifeSim RPG</title>
     <style>
         :root {
-            --bg: #060504;
+            --bg: #060504;<div class="scene-title">Current scene</div>
             --panel: #0d0a06;
             --panel-2: #15100a;
             --text: #f7f3e8;
@@ -119,6 +119,16 @@
             -webkit-overflow-scrolling: touch;
         }
 
+        /* Applied via JS only while there's more tab content scrolled out of
+           view to the right - see updateNavTabsScrollFade(). Keeps the fade
+           honest: it disappears once the last tab (e.g. Finances) is
+           actually scrolled into view, rather than always fading the edge
+           regardless of whether anything is actually hidden there. */
+        .nav-tabs.has-more-tabs {
+            -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+            mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+        }
+
         .tab-btn {
             background: rgba(255, 255, 255, 0.02);
             color: var(--muted);
@@ -158,6 +168,56 @@
         }
 
         .panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Life tab's nested sub-tabs - smaller and less prominent than the
+           top-level nav-tabs so they read as a level down, not a second
+           identical row. Same gold-active theme, scaled down. */
+        .nav-subtabs {
+            display: flex;
+            gap: 6px;
+            padding: 0 0 10px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 14px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .subtab-btn {
+            background: rgba(255, 255, 255, 0.02);
+            color: var(--muted);
+            border: 1px solid rgba(212, 175, 55, 0.12);
+            border-radius: 8px;
+            padding: 6px 11px;
+            font-family: inherit;
+            font-size: 0.72rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+            flex: 0 0 auto;
+        }
+
+        .subtab-btn:hover {
+            color: #ffffff;
+            border-color: rgba(212, 175, 55, 0.28);
+        }
+
+        .subtab-btn.active {
+            color: #020402;
+            background: linear-gradient(180deg, #f6d365, #d4af37);
+            border-color: #f6d365;
+            font-weight: bold;
+        }
+
+        .life-subpanel {
+            display: none;
+        }
+
+        .life-subpanel.active {
             display: flex;
             flex-direction: column;
         }
@@ -622,6 +682,10 @@
                 padding: 10px 10px 0;
             }
 
+            .nav-subtabs {
+                padding: 0 0 8px;
+            }
+
             .panel {
                 margin: 0 10px 10px;
             }
@@ -663,6 +727,34 @@
             border-radius: 18px;
             padding: 22px;
             box-shadow: var(--shadow);
+        }
+
+        .creation-progress {
+            padding: 8px 4px 4px;
+        }
+
+        .creation-progress-bar-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(212, 175, 55, 0.12);
+            overflow: hidden;
+        }
+
+        .creation-progress-bar-fill {
+            height: 100%;
+            width: 15%;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--gold-bright), #f6d365);
+            transition: width 0.5s ease;
+        }
+
+        .creation-progress-label {
+            margin-top: 10px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: 0.3px;
         }
 
         .creation-title {
@@ -831,6 +923,23 @@
             color: var(--muted);
             text-transform: uppercase;
             letter-spacing: 0.6px;
+        }
+
+        .cf-checkbox-label {
+            flex-direction: row !important;
+            align-items: center;
+            gap: 10px !important;
+            text-transform: none !important;
+            font-size: 0.8rem !important;
+            line-height: 1.35;
+            padding: 4px 2px;
+        }
+
+        .cf-checkbox-label input[type="checkbox"] {
+            flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--gold-bright);
         }
 
         .custom-form textarea {
@@ -1058,11 +1167,28 @@
                 <div id="preset-hint" class="preset-hint">Balanced difficulty and tone. No thumb on the scale either way.</div>
             </div>
 
+            <div class="preset-picker">
+                <div class="preset-label">Genre</div>
+                <div class="preset-options">
+                    <button type="button" class="preset-btn active" data-genre="realism" onclick="selectGenre('realism')">Realism</button>
+                    <button type="button" class="preset-btn" data-genre="fantasy" onclick="selectGenre('fantasy')">Fantasy</button>
+                    <button type="button" class="preset-btn" data-genre="horror" onclick="selectGenre('horror')">Horror</button>
+                </div>
+                <div id="genre-hint" class="preset-hint">No magic or supernatural events. Everything stays plausible.</div>
+            </div>
+
             <div id="creation-choice" class="creation-choice">
                 <button class="submit-btn" id="continue-life-btn" onclick="continueLife()" style="display: none;">Continue Life</button>
                 <button class="submit-btn" id="random-character-btn" onclick="chooseRandom()">Random Character</button>
                 <button class="submit-btn" id="custom-character-btn" onclick="showCustomForm()">Custom Character</button>
                 <button class="secondary-btn" onclick="showSavesList()">Load Saved Game</button>
+            </div>
+
+            <div id="creation-progress" class="creation-progress" style="display: none;">
+                <div class="creation-progress-bar-track">
+                    <div id="creation-progress-bar-fill" class="creation-progress-bar-fill"></div>
+                </div>
+                <div id="creation-progress-label" class="creation-progress-label">Starting...</div>
             </div>
 
             <div id="custom-form" class="custom-form" style="display: none;">
@@ -1079,8 +1205,28 @@
                 <label>Race
                     <input type="text" id="cf-race" placeholder="e.g. Irish American">
                 </label>
+                <label>Starting Month
+                    <select id="cf-month">
+                        <option value="">Let the AI decide</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                </label>
                 <label>Starting Year
                     <input type="number" id="cf-year" placeholder="e.g. 2026">
+                </label>
+                <label>Starting Cash
+                    <input type="number" id="cf-cash" placeholder="e.g. 1000" step="0.01">
                 </label>
                 <label>Location
                     <input type="text" id="cf-location" placeholder="e.g. Detroit, MI">
@@ -1090,6 +1236,10 @@
                 </label>
                 <label>Background
                     <textarea id="cf-background" placeholder="Backstory, upbringing, how they got here..."></textarea>
+                </label>
+                <label class="cf-checkbox-label">
+                    <input type="checkbox" id="cf-expand-background">
+                    Expand my background with AI (develops what you wrote into a fuller backstory, rather than using it exactly as typed)
                 </label>
 
                 <div class="cf-section-label">Stats (0-20)</div>
@@ -1199,29 +1349,103 @@
 
         <div class="nav-tabs">
             <button class="tab-btn active" onclick="switchTab('story-panel', this)">Narrative</button>
-            <button class="tab-btn" onclick="switchTab('stats-panel', this)">Stats & Mods</button>
+            <button class="tab-btn" onclick="switchTab('life-panel', this)">Life</button>
             <button class="tab-btn" onclick="switchTab('relationships-panel', this)">Relationships</button>
             <button class="tab-btn" onclick="switchTab('inventory-panel', this)">Inventory</button>
-            <button class="tab-btn" onclick="switchTab('events-panel', this)">Events</button>
+            <button class="tab-btn" onclick="switchTab('finances-panel', this)">Finances</button>
         </div>
 
         <div id="story-panel" class="panel active">
             <div class="story-screen">
-                <div class="scene-title">Current scene</div>
+                <div class="scene-title" id="scene-title">Current scene</div>
                 <div id="story-feed" class="story-feed">
                     <div class="narrative-block">Initializing engine state...</div>
                 </div>
             </div>
         </div>
 
-        <div id="stats-panel" class="panel">
-            <div class="data-section">
-                <h3>Core Stats (0–20 Scale)</h3>
-                <div id="stats-grid" class="stat-grid"></div>
+        <div id="life-panel" class="panel">
+            <div class="nav-subtabs">
+                <button class="subtab-btn active" onclick="switchLifeSubtab('life-stats', this)">Stats & Mods</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-events', this)">Events</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-gear', this)">Gear</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-case-file', this)">Case File</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-health', this)">Health</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-pregnancies', this)">Pregnancies</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-reputation', this)">Reputation & Skills</button>
+                <button class="subtab-btn" onclick="switchLifeSubtab('life-world-facts', this)">World Facts</button>
             </div>
-            <div class="data-section">
-                <h3>Status Flags & Conditions</h3>
-                <div id="status-flags-list">None</div>
+
+            <div id="life-stats" class="life-subpanel active">
+                <div class="data-section">
+                    <h3>Core Stats (0–20 Scale)</h3>
+                    <div id="stats-grid" class="stat-grid"></div>
+                </div>
+                <div class="data-section">
+                    <h3>Status Flags & Conditions</h3>
+                    <div id="status-flags-list">None</div>
+                </div>
+            </div>
+
+            <div id="life-events" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Life History Log</h3>
+                    <div id="events-list">No recorded life events.</div>
+                </div>
+            </div>
+
+            <div id="life-gear" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Gear</h3>
+                    <div id="gear-list">No gear carried.</div>
+                </div>
+            </div>
+
+            <div id="life-case-file" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Open Threads</h3>
+                    <div id="case-file-list">No open threads.</div>
+                </div>
+            </div>
+
+            <div id="life-health" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Health Ceiling</h3>
+                    <div id="max-health-display">Max health: 20</div>
+                </div>
+                <div class="data-section">
+                    <h3>Permanent Injuries</h3>
+                    <div id="permanent-injuries-list">None.</div>
+                </div>
+                <div class="data-section">
+                    <h3>Recovering Injuries</h3>
+                    <div id="recovering-injuries-list">None.</div>
+                </div>
+            </div>
+
+            <div id="life-pregnancies" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Pregnancies</h3>
+                    <div id="pregnancies-list">None.</div>
+                </div>
+            </div>
+
+            <div id="life-reputation" class="life-subpanel">
+                <div class="data-section">
+                    <h3>Reputation (0–20 Scale)</h3>
+                    <div id="reputation-list">No reputation established.</div>
+                </div>
+                <div class="data-section">
+                    <h3>Skills</h3>
+                    <div id="skills-list">No skills learned.</div>
+                </div>
+            </div>
+
+            <div id="life-world-facts" class="life-subpanel">
+                <div class="data-section">
+                    <h3>World Facts</h3>
+                    <div id="world-facts-list">No standing world facts recorded.</div>
+                </div>
             </div>
         </div>
 
@@ -1239,10 +1463,18 @@
             </div>
         </div>
 
-        <div id="events-panel" class="panel">
+        <div id="finances-panel" class="panel">
             <div class="data-section">
-                <h3>Life History Log</h3>
-                <div id="events-list">No recorded life events.</div>
+                <h3>Employment</h3>
+                <div id="employment-display">Unemployed</div>
+            </div>
+            <div class="data-section">
+                <h3>Recurring Expenses</h3>
+                <div id="expenses-list">No recurring expenses.</div>
+            </div>
+            <div class="data-section">
+                <h3>Debt</h3>
+                <div id="debt-display">$0</div>
             </div>
         </div>
 
@@ -1295,7 +1527,7 @@
 
             <div class="custom-input-group">
                 <input type="text" id="custom-action" placeholder="Type custom action..." onkeydown="handleKeyPress(event)">
-                <button class="submit-btn" onclick="sendCustomAction()">Send</button>
+                <button id="send-button" class="submit-btn" onclick="sendCustomAction()">Send</button>
             </div>
         </div>
     </div>
@@ -1304,6 +1536,7 @@
         let cachedState = null;
         let currentSaveId = null;
         let selectedPreset = 'standard';
+        let selectedGenre = 'realism';
 
         const PRESET_HINTS = {
             gritty: 'Higher stakes, harder rolls, consequences land more often. Closer to hardboiled crime fiction.',
@@ -1311,12 +1544,29 @@
             forgiving: 'More room to recover from failure. A bit more warmth alongside the realism.',
         };
 
+        const GENRE_HINTS = {
+            realism: 'No magic or supernatural events. Everything stays plausible.',
+            fantasy: 'Magic, mythic creatures, and impossible events are a natural part of this world.',
+            horror: 'Leans into dread and unease where the story allows it, without losing grounded realism.',
+        };
+
         function selectPreset(preset) {
             selectedPreset = preset;
-            document.querySelectorAll('.preset-btn').forEach((btn) => {
+            document.querySelectorAll('.preset-btn[data-preset]').forEach((btn) => {
                 btn.classList.toggle('active', btn.dataset.preset === preset);
             });
             document.getElementById('preset-hint').textContent = PRESET_HINTS[preset] || '';
+        }
+
+        function selectGenre(genre) {
+            // Fixed for the life of this character once chosen - there is no
+            // server-side path to change genre mid-playthrough, only at
+            // creation, matching Player.genre.
+            selectedGenre = genre;
+            document.querySelectorAll('.preset-btn[data-genre]').forEach((btn) => {
+                btn.classList.toggle('active', btn.dataset.genre === genre);
+            });
+            document.getElementById('genre-hint').textContent = GENRE_HINTS[genre] || '';
         }
 
         function rememberSaveId(saveId) {
@@ -1332,6 +1582,13 @@
 
         window.onload = () => {
             tryResumeOrShowCreation();
+
+            // Click-to-skip: tapping anywhere in the story feed while a
+            // scene is still typing out snaps it to fully revealed
+            // instantly. A no-op if nothing is currently typing.
+            getStoryFeed().addEventListener('click', () => {
+                skipActiveTypewriter();
+            });
         };
 
         // On load: if this browser already has an active server-side session
@@ -1351,6 +1608,14 @@
                     document.getElementById('creation-screen').style.display = 'none';
                     updateUIState(data.player_state);
                     gameInProgress = true;
+                    // A plain page reload/refresh restores the server-side
+                    // session here, but that alone leaves the story feed
+                    // showing the static "Initializing engine state..."
+                    // placeholder forever - nothing else was ever generating
+                    // a real scene to replace it with. resumeSave (the
+                    // manual "Load Game" path) already did this correctly;
+                    // this call was the missing piece for a bare reload.
+                    await generateContinuationScene();
                     return;
                 }
             } catch (err) {
@@ -1368,6 +1633,35 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
 
             document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+
+            // Scrolling to a tab (e.g. tapping one near the edge) can change
+            // how much is left to scroll to on either side - refresh the
+            // fade cue after the switch, not just on manual scroll.
+            updateNavTabsScrollFade();
+        }
+
+        // Toggles the has-more-tabs class (see CSS) based on whether the
+        // nav-tabs bar actually has content scrolled out of view to the
+        // right. Without this, a tab that doesn't fit on screen (Finances
+        // is currently the 5th) has no visual indication it exists at all -
+        // the bar just quietly cuts off with nothing suggesting there's
+        // more to scroll to.
+        function updateNavTabsScrollFade() {
+            const navTabs = document.querySelector('.nav-tabs');
+            if (!navTabs) return;
+            const hasMoreToRight = navTabs.scrollLeft + navTabs.clientWidth < navTabs.scrollWidth - 2;
+            navTabs.classList.toggle('has-more-tabs', hasMoreToRight);
+        }
+
+        function switchLifeSubtab(subpanelId, btnElement) {
+            // Same pattern as switchTab, scoped to the Life tab's own
+            // sub-panels/sub-buttons so switching a sub-tab never touches
+            // the top-level nav-tabs state.
+            document.querySelectorAll('.life-subpanel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+
+            document.getElementById(subpanelId).classList.add('active');
             btnElement.classList.add('active');
         }
 
@@ -1391,24 +1685,114 @@
         // call until the player taps Next on the summary screen.
         let pendingOpeningScene = null;
 
+        // Progress stages shown during character creation, in order. Each
+        // maps to a real SSE event from /api/new-game/stream - this is not
+        // a fake/generic animation, the bar and label only advance when the
+        // corresponding real stage actually completes.
+        const CREATION_PROGRESS_STAGES = [
+            { key: 'preparing', label: 'Starting...', percent: 10 },
+            { key: 'character_ready', label: 'Character created. Writing background...', percent: 40 },
+            { key: 'bio_done', label: 'Setting the opening scene...', percent: 65 },
+            { key: 'final', label: 'Ready.', percent: 100 },
+        ];
+
+        function setCreationProgress(stageKey) {
+            const stage = CREATION_PROGRESS_STAGES.find(s => s.key === stageKey);
+            if (!stage) return;
+            const fill = document.getElementById('creation-progress-bar-fill');
+            const label = document.getElementById('creation-progress-label');
+            if (fill) fill.style.width = stage.percent + '%';
+            if (label) label.textContent = stage.label;
+        }
+
         async function startNewGame(payload = {}) {
+            document.getElementById('creation-choice').style.display = 'none';
+            const customForm = document.getElementById('custom-form');
+            if (customForm) customForm.style.display = 'none';
+            const progressPanel = document.getElementById('creation-progress');
+            progressPanel.style.display = 'block';
+            setCreationProgress('preparing');
+
             try {
-                const response = await fetch('/api/new-game', {
+                const response = await fetch('/api/new-game/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
                 });
-                const data = await response.json();
 
-                currentSaveId = data.save_id || null;
-                rememberSaveId(currentSaveId);
-                gameInProgress = true;
+                if (!response.ok || !response.body) {
+                    throw new Error(`Server responded with ${response.status}`);
+                }
 
-                pendingOpeningScene = data;
-                showSummaryScreen(data);
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                let bioText = '';
+                let finalData = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+
+                    let frameEnd;
+                    while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+                        const frame = buffer.slice(0, frameEnd);
+                        buffer = buffer.slice(frameEnd + 2);
+
+                        const eventMatch = frame.match(/^event: (.+)$/m);
+                        const dataMatch = frame.match(/^data: (.+)$/m);
+                        if (!eventMatch || !dataMatch) continue;
+
+                        const eventName = eventMatch[1];
+                        let eventPayload;
+                        try {
+                            eventPayload = JSON.parse(dataMatch[1]);
+                        } catch (err) {
+                            continue;
+                        }
+
+                        if (eventName === 'preparing') {
+                            setCreationProgress('preparing');
+                        } else if (eventName === 'character_ready') {
+                            setCreationProgress('character_ready');
+                            currentSaveId = eventPayload.save_id || null;
+                            rememberSaveId(currentSaveId);
+                            gameInProgress = true;
+                        } else if (eventName === 'bio_chunk') {
+                            bioText += eventPayload.text;
+                        } else if (eventName === 'narrative_chunk') {
+                            // Bio is done streaming the moment the first
+                            // narrative_chunk arrives, since the two stages
+                            // are strictly sequential server-side - this is
+                            // the earliest reliable point to advance past
+                            // "writing background" without a separate event
+                            // dedicated just to marking that boundary.
+                            setCreationProgress('bio_done');
+                        } else if (eventName === 'final') {
+                            setCreationProgress('final');
+                            finalData = eventPayload;
+                            if (!finalData.bio) finalData.bio = bioText;
+                        } else if (eventName === 'error') {
+                            throw new Error(eventPayload.error || 'Unknown error during character creation.');
+                        }
+                    }
+                }
+
+                if (!finalData) {
+                    throw new Error('Stream ended without a final result.');
+                }
+
+                pendingOpeningScene = finalData;
+                progressPanel.style.display = 'none';
+                showSummaryScreen(finalData);
             } catch (err) {
                 console.error('Failed to start game:', err);
-                setStory('Error initializing game engine.');
+                progressPanel.style.display = 'none';
+                document.getElementById('creation-choice').style.display = 'flex';
+                setStory('Error initializing game engine. Please try again.');
             }
         }
 
@@ -1487,8 +1871,7 @@
         }
 
         function chooseRandom() {
-            document.getElementById('creation-screen').style.display = 'none';
-            startNewGame({ mode: 'random', difficulty_preset: selectedPreset });
+            startNewGame({ mode: 'random', difficulty_preset: selectedPreset, genre: selectedGenre });
         }
 
         function showCustomForm() {
@@ -1499,6 +1882,7 @@
         function showChoiceButtons() {
             document.getElementById('custom-form').style.display = 'none';
             document.getElementById('saves-form').style.display = 'none';
+            document.getElementById('creation-progress').style.display = 'none';
             document.getElementById('creation-choice').style.display = 'flex';
         }
 
@@ -1595,7 +1979,9 @@
                 document.getElementById('cf-name').value = draft.name || '';
                 document.getElementById('cf-age').value = draft.age ?? '';
                 document.getElementById('cf-race').value = draft.race || '';
+                document.getElementById('cf-month').value = draft.month || '';
                 document.getElementById('cf-year').value = draft.year ?? '';
+                document.getElementById('cf-cash').value = draft.cash ?? '';
                 document.getElementById('cf-location').value = draft.location || '';
                 document.getElementById('cf-occupation').value = draft.occupation || '';
                 document.getElementById('cf-background').value = draft.background || '';
@@ -1665,13 +2051,17 @@
             const payload = {
                 mode: 'manual',
                 difficulty_preset: selectedPreset,
+                genre: selectedGenre,
                 name: getVal('cf-name') || undefined,
                 age: getNum('cf-age', undefined),
                 race: getVal('cf-race') || undefined,
+                month: getVal('cf-month') || undefined,
                 year: getNum('cf-year', undefined),
+                cash: getFloat('cf-cash', undefined),
                 location: getVal('cf-location') || undefined,
                 occupation: getVal('cf-occupation') || undefined,
                 background: getVal('cf-background') || undefined,
+                expand_background: document.getElementById('cf-expand-background').checked,
                 health: getStat('cf-health', undefined),
                 strength: getStat('cf-strength', undefined),
                 charisma: getStat('cf-charisma', undefined),
@@ -1685,7 +2075,6 @@
                 expense_frequency: (expenseName && expenseAmount > 0) ? getVal('cf-expense-frequency') : undefined,
             };
 
-            document.getElementById('creation-screen').style.display = 'none';
             startNewGame(payload);
         }
 
@@ -1815,64 +2204,77 @@
                 updateUIState(data.player_state);
                 gameInProgress = true;
 
-                // Generate an actual continuation scene rather than leaving the
-                // player on a static placeholder with no choices to act on.
-                // This is a real AI call and can genuinely take a while, so the
-                // status text changes here to make clear it's still working,
-                // not stuck - and it gets its own timeout with a real retry
-                // path rather than hanging indefinitely.
-                setStory('Picking up where you left off...');
-
-                let continueData;
-                try {
-                    const continueResponse = await fetchWithTimeout('/api/action', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ action: '$Resume the story from exactly where this session left off. Briefly reorient the player, then continue.$' }),
-                    }, 30000);
-                    continueData = await continueResponse.json();
-                } catch (continueErr) {
-                    console.error('Continuation scene failed or timed out:', continueErr);
-                    setStory("You're back in. (Couldn't generate a fresh scene right now, but your save loaded fine.)");
-                    renderChoices(['Continue']);
-                    document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
-                        sendAction('Continue where I left off.');
-                    };
-                    return;
-                }
-
-                if (continueData.error) {
-                    setStory('Welcome back. (Could not generate a fresh scene: ' + continueData.error + ')');
-                    renderChoices(['Continue']);
-                    document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
-                        sendAction('Continue where I left off.');
-                    };
-                    return;
-                }
-
-                if (continueData.narration) {
-                    if (continueData.narration.narrative) {
-                        setStory(continueData.narration.narrative);
-                    }
-                    if (continueData.narration.choices && continueData.narration.choices.length > 0) {
-                        renderChoices(continueData.narration.choices);
-                    } else {
-                        // Never leave the player with zero choices and no input path.
-                        renderChoices(['Continue']);
-                        document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
-                            sendAction('Continue where I left off.');
-                        };
-                    }
-                }
-                if (continueData.player_state) {
-                    updateUIState(continueData.player_state);
-                }
+                await generateContinuationScene();
             } catch (err) {
                 console.error('Failed to resume save:', err);
                 const timedOut = err.name === 'AbortError';
                 setStory(timedOut ? 'Loading timed out. Your save may still be fine, worth trying again.' : 'Connection error while loading your save.');
                 renderChoices(['Try again']);
                 document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => resumeSave(saveId);
+            }
+        }
+
+        // Generates an actual continuation scene rather than leaving the
+        // player on a static placeholder ("Initializing engine state...")
+        // with no choices to act on. Shared by resumeSave (the manual
+        // "Load Game" path) and tryResumeOrShowCreation (a plain page
+        // reload/refresh, which restores the server-side session silently
+        // but - before this was extracted - never triggered this step,
+        // leaving the story feed stuck on the placeholder forever even
+        // though the session itself had resumed correctly underneath it).
+        // This is a real AI call and can genuinely take a while, so the
+        // status text changes here to make clear it's still working, not
+        // stuck - and it gets its own timeout with a real retry path
+        // rather than hanging indefinitely.
+        async function generateContinuationScene() {
+            setStory('Picking up where you left off...');
+
+            let continueData;
+            try {
+                const continueResponse = await fetchWithTimeout('/api/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: '$Resume the story from exactly where this session left off. Briefly reorient the player, then continue.$' }),
+                }, 120000);
+                continueData = await continueResponse.json();
+            } catch (continueErr) {
+                console.error('Continuation scene failed or timed out:', continueErr);
+                setStory("You're back in. (Couldn't generate a fresh scene right now, but your save loaded fine.)");
+                renderChoices(['Continue']);
+                document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                    sendAction('Continue where I left off.');
+                };
+                return;
+            }
+
+            if (continueData.error) {
+                setStory('Welcome back. (Could not generate a fresh scene: ' + continueData.error + ')');
+                renderChoices(['Continue']);
+                document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                    sendAction('Continue where I left off.');
+                };
+                return;
+            }
+
+            if (continueData.narration) {
+                if (continueData._choice_enforcement_debug) {
+                    console.log('[choice enforcement] (resume)', continueData._choice_enforcement_debug);
+                }
+                if (continueData.narration.narrative) {
+                    setStory(continueData.narration.narrative);
+                }
+                if (continueData.narration.choices && continueData.narration.choices.length > 0) {
+                    renderChoices(continueData.narration.choices);
+                } else {
+                    // Never leave the player with zero choices and no input path.
+                    renderChoices(['Continue']);
+                    document.getElementById('choices-container').querySelector('.choice-btn').onclick = () => {
+                        sendAction('Continue where I left off.');
+                    };
+                }
+            }
+            if (continueData.player_state) {
+                updateUIState(continueData.player_state);
             }
         }
 
@@ -1887,6 +2289,20 @@
 
         async function sendAction(actionText) {
             if (!actionText.trim()) return;
+            if (actionInFlight) return; // a turn is already being submitted - ignore this one rather than race it
+            actionInFlight = true;
+
+            const sendButton = document.getElementById('send-button');
+            const customActionInput = document.getElementById('custom-action');
+            if (sendButton) sendButton.disabled = true;
+            if (customActionInput) customActionInput.disabled = true;
+            document.querySelectorAll('.choice-btn').forEach(btn => btn.disabled = true);
+
+            // If the previous scene's text is still typing out when the
+            // player submits their next action, snap it to fully revealed
+            // instantly rather than leaving it stuck mid-animation under
+            // the new content that's about to be appended.
+            skipActiveTypewriter();
 
             const isSuperuser = isSuperuserAction(actionText);
 
@@ -1913,43 +2329,16 @@
                     requestBody.locked_outcome = cheatLockOutcome;
                 }
 
-                const response = await fetch('/api/action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-
-                const data = await response.json();
-
-                if (data.error) {
-                    appendStory(`[Error: ${data.error}]`);
-                    return;
-                }
-
-                if (data.dice_outcome && data.dice_outcome.roll !== undefined) {
-                    renderDiceOutcome(data.dice_outcome);
-                } else if (data.dice_outcome && data.dice_outcome.locked) {
-                    renderLockedOutcome(data.dice_outcome);
-                }
-
-                if (data.narration) {
-                    if (data.narration.narrative) {
-                        appendStory(data.narration.narrative, 'narrative');
-                    }
-                    // A pure question doesn't change the scene, so the choices
-                    // the player was already looking at are still valid - only
-                    // replace them if the server actually sent new ones.
-                    if (data.narration.choices && data.narration.choices.length > 0) {
-                        renderChoices(data.narration.choices);
-                    }
-                }
-
-                if (data.player_state) {
-                    updateUIState(data.player_state);
-                }
+                await streamAction(requestBody);
             } catch (err) {
                 console.error('Failed to perform action:', err);
-                appendStory('[Connection error. Please try again.]');
+                appendStory('[Connection error. Please try again.]', 'error');
+                renderRetryButton(actionText);
+            } finally {
+                actionInFlight = false;
+                if (sendButton) sendButton.disabled = false;
+                if (customActionInput) customActionInput.disabled = false;
+                document.querySelectorAll('.choice-btn').forEach(btn => btn.disabled = false);
             }
         }
 
@@ -2029,7 +2418,16 @@
                     console.error('Failed to set speed:', data.error);
                     return;
                 }
-                updatePaceButtons(speed);
+                // The response already carries a fresh player_state (date,
+                // header, everything) - previously only updatePaceButtons
+                // ran, so the rest of the display (date/header included)
+                // could silently drift out of sync with the real state
+                // until the next narrated turn happened to refresh it.
+                if (data.player_state) {
+                    updateUIState(data.player_state);
+                } else {
+                    updatePaceButtons(speed);
+                }
             } catch (err) {
                 console.error('Failed to set speed:', err);
             }
@@ -2064,23 +2462,293 @@
             }
         }
 
+        // Typewriter reveal for narrative text ("Option A" perceived-speed
+        // fix): the full response already arrived from the server exactly
+        // as before - nothing about generation or latency changed. This
+        // only changes how the ALREADY-COMPLETE text gets shown, revealing
+        // it word by word instead of dumping the whole block in at once,
+        // so there's visible progress instead of a blank wait followed by
+        // a wall of text. Word-by-word (not character-by-character) reads
+        // naturally and finishes in a reasonable time even for an 850-word
+        // scene. Any in-flight typewriter is tracked in
+        // activeTypewriterHandle so a new action or a manual skip can
+        // cancel it cleanly rather than leaving two typewriters racing on
+        // the same block.
+        let activeTypewriterHandle = null;
+        const TYPEWRITER_MS_PER_WORD = 35;
+
+        // Guards against double-submitting a turn: without this, clicking
+        // Send/a choice/Continue twice in quick succession (or hitting
+        // Enter repeatedly while a slow response is still in flight) fires
+        // two fully independent requests, each starting from the SAME
+        // player state and each independently advancing the date - a real
+        // race distinct from the backend's turn_number save-ordering guard,
+        // since both requests here are genuinely concurrent from the start,
+        // not one stale write landing late. Simplest fix: disable input
+        // for the duration of a request rather than trying to de-duplicate
+        // or merge concurrent submissions after the fact.
+        let actionInFlight = false;
+
+        function skipActiveTypewriter() {
+            if (activeTypewriterHandle) {
+                activeTypewriterHandle.skip();
+                activeTypewriterHandle = null;
+            }
+        }
+
+        function typewriterReveal(el, fullText, onComplete) {
+            skipActiveTypewriter(); // never run two typewriters at once
+
+            const words = fullText.split(/(\s+)/); // keep whitespace tokens so spacing survives the rejoin
+            let index = 0;
+            let cancelled = false;
+            let finished = false;
+            let timeoutId = null;
+
+            function finish() {
+                if (finished) return;
+                finished = true;
+                el.textContent = fullText;
+                if (activeTypewriterHandle === handle) {
+                    activeTypewriterHandle = null;
+                }
+                if (onComplete) onComplete();
+            }
+
+            function step() {
+                if (cancelled) return;
+                index++;
+                el.textContent = words.slice(0, index).join('');
+                if (index >= words.length) {
+                    finish();
+                    return;
+                }
+                timeoutId = setTimeout(step, TYPEWRITER_MS_PER_WORD);
+            }
+
+            const handle = {
+                skip() {
+                    cancelled = true;
+                    if (timeoutId) clearTimeout(timeoutId);
+                    finish();
+                },
+            };
+            activeTypewriterHandle = handle;
+
+            el.textContent = '';
+            step();
+        }
+
         function setStory(text) {
             const feed = getStoryFeed();
             feed.innerHTML = '';
 
             const block = document.createElement('div');
             block.className = 'narrative-block';
+            // A resumed/loaded game shows text the player already read in a
+            // prior session - render it instantly, never replay a typewriter
+            // animation for old content.
             block.textContent = text;
             feed.appendChild(block);
         }
 
-        function appendStory(text, type = 'narrative') {
+        // Consumes /api/action/stream's Server-Sent Events and updates the
+        // UI as each piece arrives, rather than waiting for one full JSON
+        // response the way /api/action worked. Native EventSource only
+        // supports GET requests, and this needs to POST the action text,
+        // so the stream is parsed manually from a fetch() ReadableStream.
+        //
+        // Event sequence from the server: dice_outcome (fires immediately,
+        // before any prose), narrative_chunk (repeated, as prose streams
+        // in), final (once, with the same {classification, dice_outcome,
+        // narration, player_state} shape /api/action used to return in
+        // one shot), and error (only on failure, ends the stream early).
+        async function streamAction(requestBody) {
+            const response = await fetch('/api/action/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok || !response.body) {
+                appendStory('[Connection error. Please try again.]', 'error');
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            // The narrative block is created once, on the first chunk, and
+            // subsequent chunks are appended straight into it as plain text
+            // - this replaces the old typewriterReveal simulation entirely.
+            // Real streaming already reveals text at actual generation
+            // speed, so faking a typing animation on top of it would only
+            // fight the real pacing rather than reflect it.
+            let narrativeBlock = null;
+            let accumulatedText = '';
+            const feed = getStoryFeed();
+
+            function ensureNarrativeBlock() {
+                if (!narrativeBlock) {
+                    narrativeBlock = document.createElement('div');
+                    narrativeBlock.className = 'narrative-block';
+                    feed.appendChild(narrativeBlock);
+                }
+                return narrativeBlock;
+            }
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE frames are separated by a blank line; each frame has
+                // an "event: NAME" line and a "data: JSON" line.
+                let frameEnd;
+                while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+                    const frame = buffer.slice(0, frameEnd);
+                    buffer = buffer.slice(frameEnd + 2);
+
+                    const eventMatch = frame.match(/^event: (.+)$/m);
+                    const dataMatch = frame.match(/^data: (.+)$/m);
+                    if (!eventMatch || !dataMatch) continue;
+
+                    const eventName = eventMatch[1];
+                    let payload;
+                    try {
+                        payload = JSON.parse(dataMatch[1]);
+                    } catch (err) {
+                        continue;
+                    }
+
+                    if (eventName === 'preparing') {
+                        // Fires immediately, before classification/dice
+                        // resolution even runs - the connection is open at
+                        // this point but no real content exists yet. A
+                        // small in-place cue here is the difference between
+                        // "the app is doing something" and "the app looks
+                        // frozen" during that gap. Cleared automatically the
+                        // moment the first real content (dice_outcome or a
+                        // narrative chunk) arrives, further down.
+                        const thinkingBlock = document.createElement('div');
+                        thinkingBlock.className = 'narrative-block thinking-indicator';
+                        thinkingBlock.textContent = '...';
+                        thinkingBlock.id = 'sse-thinking-indicator';
+                        feed.appendChild(thinkingBlock);
+                    } else if (eventName === 'dice_outcome') {
+                        const thinkingEl = document.getElementById('sse-thinking-indicator');
+                        if (thinkingEl) thinkingEl.remove();
+                        // The turn's resolved date is already known at this
+                        // point (Python resolved it before narration even
+                        // started) - update the top bar right away instead
+                        // of leaving the previous turn's date showing for
+                        // the whole duration of streaming.
+                        updateHeaderDisplay(payload.header, payload.location);
+                        const dice = payload.dice_outcome;
+                        // dice.auto marks a turn that never rolled at all
+                        // (the action was routine/certain - see
+                        // auto_success_outcome() in Dice.py) - showing a
+                        // "[DICE ROLL: 0 vs DC N/A]" badge for these was
+                        // meaningless noise on every single auto turn,
+                        // which is most turns. The previous check here
+                        // (`dice.roll !== undefined`) didn't actually
+                        // exclude these: auto turns set roll to null, not
+                        // omit it, and null !== undefined is true in JS -
+                        // so the badge was rendering on every turn
+                        // regardless of auto status.
+                        if (dice && dice.auto) {
+                            // no badge - nothing was actually rolled
+                        } else if (dice && dice.roll !== undefined && dice.roll !== null) {
+                            renderDiceOutcome(dice);
+                        } else if (dice && dice.locked) {
+                            renderLockedOutcome(dice);
+                        }
+                    } else if (eventName === 'stage_timing') {
+                        // Fires once, right after planning finishes and
+                        // before any prose has streamed - this is the
+                        // earliest point classification_seconds and
+                        // planning_seconds are both known, so it's logged
+                        // immediately rather than waiting for the full
+                        // turn to finish. The complete breakdown (including
+                        // writing time) also lands on the 'final' event's
+                        // _stage_timing field, logged below.
+                        console.log('[stage timing] classification+planning', payload);
+                    } else if (eventName === 'narrative_chunk') {
+                        const thinkingEl = document.getElementById('sse-thinking-indicator');
+                        if (thinkingEl) thinkingEl.remove();
+                        const block = ensureNarrativeBlock();
+                        accumulatedText += payload.text;
+                        block.textContent = accumulatedText;
+                        block.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    } else if (eventName === 'final') {
+                        const data = payload;
+
+                        if (data._choice_enforcement_debug) {
+                            // Visible only in devtools console - a way to
+                            // actually confirm, per turn, whether the
+                            // choice-cadence enforcement fired and what it
+                            // did, rather than inferring it from a Continue
+                            // button that looks identical whether the
+                            // scene legitimately had no fork or the system
+                            // tried and failed to force one.
+                            console.log('[choice enforcement]', data._choice_enforcement_debug);
+                        }
+
+                        if (data._stage_timing) {
+                            // Full per-stage breakdown for this turn:
+                            // classification, planning (DeepSeek V4 Pro),
+                            // time to first prose token, total writing
+                            // time, and total turn time. Answers "which
+                            // portion is it stuck on" directly instead of
+                            // guessing from how long the spinner sat there.
+                            console.log('[stage timing] full turn', data._stage_timing);
+                        }
+
+                        if (data.narration) {
+                            const newChoices = Array.isArray(data.narration.choices) ? data.narration.choices : [];
+                            // The narrative text may have been rewritten
+                            // server-side after streaming finished (the
+                            // choice-forcing retry can append a note to it),
+                            // so reconcile the displayed block against the
+                            // final authoritative text rather than trusting
+                            // only what was streamed.
+                            const finalText = data.narration.narrative || accumulatedText;
+                            if (finalText !== accumulatedText) {
+                                const block = ensureNarrativeBlock();
+                                block.textContent = finalText;
+                            }
+                            renderChoices(newChoices);
+                        }
+
+                        if (data.player_state) {
+                            updateUIState(data.player_state);
+                        }
+                    } else if (eventName === 'error') {
+                        appendStory(`[Error: ${payload.error}]`, 'error');
+                        renderRetryButton(requestBody.action);
+                    }
+                }
+            }
+        }
+
+        function appendStory(text, type = 'narrative', onComplete = null) {
             const feed = getStoryFeed();
             const newBlock = document.createElement('div');
             newBlock.className = type === 'user' ? 'user-action-block' : 'narrative-block';
-            newBlock.textContent = text;
             feed.appendChild(newBlock);
             newBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            if (type === 'narrative') {
+                // Only the AI's new prose gets the typewriter treatment - the
+                // player's own echoed action (type 'user') is text they just
+                // typed themselves, so it appears instantly.
+                typewriterReveal(newBlock, text, onComplete);
+            } else {
+                newBlock.textContent = text;
+                if (onComplete) onComplete();
+            }
         }
 
         function renderDiceOutcome(dice) {
@@ -2119,6 +2787,79 @@
                     button.onclick = () => sendAction(choice);
                     container.appendChild(button);
                 });
+            } else {
+                // An empty choices array is a legitimate result (the scene
+                // flowed forward without forcing a decision point), not a
+                // broken state - but the player still needs SOMETHING
+                // clickable to move on, or the only way forward is typing
+                // a custom action with no visible cue that's expected.
+                const button = document.createElement('button');
+                button.className = 'choice-btn';
+                button.textContent = 'Continue';
+                button.onclick = () => sendAction('Continue');
+                container.appendChild(button);
+            }
+        }
+
+        // Shown in place of renderChoices' output when a turn fails
+        // outright (a 'error' SSE event, or streamAction throwing) - a
+        // one-tap way to resubmit the EXACT action that just failed,
+        // rather than the player having to retype it from memory or
+        // guess at "Continue" as a generic fallback that may not mean
+        // what they actually wanted to do. The failed action text is
+        // preserved in the button itself, not just implied.
+        function renderRetryButton(actionText) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+
+            const retryButton = document.createElement('button');
+            retryButton.className = 'choice-btn';
+            retryButton.textContent = 'Retry';
+            retryButton.onclick = () => sendAction(actionText);
+            container.appendChild(retryButton);
+
+            // A second option to move on without retrying the same action
+            // - a turn can fail for reasons retrying the identical text
+            // won't fix (a persistent provider outage), so the player
+            // shouldn't be stuck only re-attempting the same thing.
+            const customButton = document.createElement('button');
+            customButton.className = 'choice-btn';
+            customButton.textContent = 'Try something else';
+            customButton.onclick = () => {
+                const input = document.getElementById('custom-action');
+                if (input) input.focus();
+            };
+            container.appendChild(customButton);
+        }
+
+        // Updates the top-bar name/age/date display and the scene-title
+        // date/location line from a header string alone (state.header),
+        // without needing the rest of player_state. Split out from
+        // updateUIState so the early dice_outcome SSE event (which only
+        // carries header, not the full state) can refresh the displayed
+        // date immediately, rather than the date visibly lagging one full
+        // turn behind while narration/choices are still streaming in.
+        function updateHeaderDisplay(header, location) {
+            const metaEl = document.getElementById('character-meta');
+            const fullHeader = header || '';
+            // Drop Location from the compact header display - it was getting
+            // silently cut off on narrow screens. Full detail (including
+            const shortHeader = fullHeader.replace(/\s*\|\s*Location:[^|]*$/i, '');
+            metaEl.textContent = shortHeader;
+            metaEl.title = fullHeader;
+
+            // Scene title shows date + location together, above the story
+            // text - unlike character-meta (name/age/date/time, kept
+            // compact), this has its own full-width line to work with, so
+            // location fits without the truncation problem that got it
+            // dropped from character-meta above.
+            const sceneTitleEl = document.getElementById('scene-title');
+            if (sceneTitleEl) {
+                const dateMatch = fullHeader.match(/Date:\s*([^|]+)/i);
+                const dateText = dateMatch ? dateMatch[1].trim() : '';
+                const locationText = (location || '').trim();
+                const parts = [dateText, locationText].filter(Boolean);
+                sceneTitleEl.textContent = parts.length ? parts.join(' — ') : 'Current scene';
             }
         }
 
@@ -2129,14 +2870,7 @@
                 updatePaceButtons(state.sim_speed);
             }
 
-            const metaEl = document.getElementById('character-meta');
-            const fullHeader = state.header || '';
-            // Drop Location from the compact header display - it was getting
-            // silently cut off on narrow screens. Full detail (including
-            // location) is still in the Stats tab and in the title tooltip.
-            const shortHeader = fullHeader.replace(/\s*\|\s*Location:[^|]*$/i, '');
-            metaEl.textContent = shortHeader;
-            metaEl.title = fullHeader;
+            updateHeaderDisplay(state.header, state.location);
             document.getElementById('header-cash').textContent = `$${state.cash ?? 0}`;
 
             const statsGrid = document.getElementById('stats-grid');
@@ -2183,6 +2917,17 @@
                 invList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">Inventory is empty.</div>`;
             }
 
+            const gearList = document.getElementById('gear-list');
+            if (state.gear && state.gear.length > 0) {
+                gearList.innerHTML = state.gear.map(g => {
+                    const sign = g.e_modifier >= 0 ? '+' : '';
+                    return `<div class="list-item"><strong>${g.name}</strong> `
+                        + `<span style="color:#6f7b6f;font-size:0.9em;">(${sign}${g.e_modifier} to ${g.applies_to} checks)</span></div>`;
+                }).join('');
+            } else {
+                gearList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No gear carried.</div>`;
+            }
+
             const eventsList = document.getElementById('events-list');
             if (state.life_events && state.life_events.length > 0) {
                 // Most recent first reads more naturally as a life-events log
@@ -2199,6 +2944,117 @@
                 }).join('');
             } else {
                 eventsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No recorded life events.</div>`;
+            }
+
+            // Case file: durable open threads. export_engine_state only ever
+            // sends entries with status "open" (resolved ones are filtered
+            // server-side), so every entry rendered here is active by definition.
+            const caseFileList = document.getElementById('case-file-list');
+            if (state.case_file && state.case_file.length > 0) {
+                caseFileList.innerHTML = state.case_file.map(entry => {
+                    const tags = (entry.tags && entry.tags.length > 0) ? entry.tags.join(', ') : '';
+                    const dateStr = entry.created_date || '';
+                    return `<div class="list-item">${entry.summary}`
+                        + (tags ? `<br><span style="color:#6f7b6f;font-size:0.9em;">Tags: ${tags}</span>` : '')
+                        + (dateStr ? `<br><span style="color:#6f7b6f;font-size:0.9em;">Opened ${dateStr}</span>` : '')
+                        + `</div>`;
+                }).join('');
+            } else {
+                caseFileList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No open threads.</div>`;
+            }
+
+            // Health subtab: max_health ceiling, permanent injuries (never
+            // heal, lower the ceiling), recovering injuries (temporary,
+            // have a recovery_date), and debt.
+            document.getElementById('max-health-display').textContent =
+                `Max health: ${state.max_health ?? 20}`;
+
+            const permInjuriesList = document.getElementById('permanent-injuries-list');
+            if (state.permanent_injuries && state.permanent_injuries.length > 0) {
+                permInjuriesList.innerHTML = state.permanent_injuries.map(inj => {
+                    return `<div class="list-item">${inj.description}`
+                        + `<br><span style="color:#6f7b6f;font-size:0.9em;">`
+                        + `-${inj.health_cap_reduction} max health, ${inj.date}</span></div>`;
+                }).join('');
+            } else {
+                permInjuriesList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">None.</div>`;
+            }
+
+            const recovInjuriesList = document.getElementById('recovering-injuries-list');
+            if (state.recovering_injuries && state.recovering_injuries.length > 0) {
+                recovInjuriesList.innerHTML = state.recovering_injuries.map(inj => {
+                    return `<div class="list-item">${inj.description}`
+                        + `<br><span style="color:#6f7b6f;font-size:0.9em;">`
+                        + `${inj.penalty} to ${inj.stat} until ${inj.recovery_date}</span></div>`;
+                }).join('');
+            } else {
+                recovInjuriesList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">None.</div>`;
+            }
+
+            // Finances subtab: employment (occupation/job_title/salary/
+            // pay_frequency), recurring expenses, and debt.
+            const employmentEl = document.getElementById('employment-display');
+            if (state.job_title) {
+                employmentEl.innerHTML = `<div class="list-item"><strong>${state.job_title}</strong>`
+                    + (state.occupation && state.occupation !== state.job_title ? ` <span style="color:#6f7b6f;font-size:0.9em;">(${state.occupation})</span>` : '')
+                    + `<br>$${(state.salary ?? 0).toLocaleString()} / ${state.pay_frequency || 'biweekly'}</div>`;
+            } else {
+                employmentEl.innerHTML = `<div class="list-item" style="color: #6f7b6f;">${state.occupation || 'Unemployed'}</div>`;
+            }
+
+            const expensesList = document.getElementById('expenses-list');
+            if (state.expenses && state.expenses.length > 0) {
+                expensesList.innerHTML = state.expenses.map(e => {
+                    return `<div class="list-item"><strong>${e.name}</strong> — `
+                        + `$${Number(e.amount).toLocaleString()} / ${e.frequency}</div>`;
+                }).join('');
+            } else {
+                expensesList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No recurring expenses.</div>`;
+            }
+
+            document.getElementById('debt-display').textContent =
+                `$${(state.debt ?? 0).toLocaleString()}`;
+
+            // Pregnancies subtab.
+            const pregnanciesList = document.getElementById('pregnancies-list');
+            if (state.pregnancies && state.pregnancies.length > 0) {
+                pregnanciesList.innerHTML = state.pregnancies.map(p => {
+                    const childName = p.child_name ? ` — ${p.child_name}` : '';
+                    return `<div class="list-item">Partner: ${p.partner}${childName}`
+                        + `<br><span style="color:#6f7b6f;font-size:0.9em;">`
+                        + `Conceived ${p.conception_date}, due ${p.due_date}</span></div>`;
+                }).join('');
+            } else {
+                pregnanciesList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">None.</div>`;
+            }
+
+            // Reputation & Skills subtab. Both are flat name->int maps.
+            const reputationList = document.getElementById('reputation-list');
+            if (state.reputation && Object.keys(state.reputation).length > 0) {
+                reputationList.innerHTML = Object.entries(state.reputation).map(([group, value]) => {
+                    return `<div class="list-item"><strong>${group}</strong> — ${value}/20</div>`;
+                }).join('');
+            } else {
+                reputationList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No reputation established.</div>`;
+            }
+
+            const skillsList = document.getElementById('skills-list');
+            if (state.skills && Object.keys(state.skills).length > 0) {
+                skillsList.innerHTML = Object.entries(state.skills).map(([skill, value]) => {
+                    return `<div class="list-item"><strong>${skill}</strong> — ${value}</div>`;
+                }).join('');
+            } else {
+                skillsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No skills learned.</div>`;
+            }
+
+            // World facts subtab. Flat name->description string map.
+            const worldFactsList = document.getElementById('world-facts-list');
+            if (state.world_facts && Object.keys(state.world_facts).length > 0) {
+                worldFactsList.innerHTML = Object.entries(state.world_facts).map(([name, description]) => {
+                    return `<div class="list-item"><strong>${name}</strong> — ${description}</div>`;
+                }).join('');
+            } else {
+                worldFactsList.innerHTML = `<div class="list-item" style="color: #6f7b6f;">No standing world facts recorded.</div>`;
             }
         }
     </script>

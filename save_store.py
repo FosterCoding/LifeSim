@@ -45,12 +45,38 @@ def save_playthrough(save_id: str, player_data: Dict[str, Any]) -> None:
     Insert or overwrite a playthrough. save_id is stable for the life of one
     character (created once at new-game time, reused on every auto-save), so
     repeated calls UPDATE the same row rather than growing the table.
+
+    Guards against a stale write clobbering a newer one using turn_number
+    (see Player.turn_number): if the row already on disk has a HIGHER
+    turn_number than the data being saved now, this save is silently
+    skipped rather than applied. This closes a real race between the main
+    request's synchronous save and the background mechanical-extraction
+    thread's own follow-up save (app.py's _apply_extraction_async) - if the
+    player submits their next action quickly enough, that next turn's save
+    could land first, and the still-in-flight background save from the
+    PREVIOUS turn could then overwrite it with older data (an earlier
+    date, missing state) purely due to thread/request scheduling, not
+    because it was actually the more current state. Comparing turn_number
+    instead of wall-clock time is deliberate - clock skew or scheduling
+    jitter can't fool an integer that only every increments by exactly 1
+    per real turn.
     """
+    incoming_turn = player_data.get("turn_number", 0)
     now = datetime.now(timezone.utc).isoformat()
     blob = json.dumps(player_data)
     conn = _get_conn()
     try:
-        existing = conn.execute("SELECT created_at FROM saves WHERE save_id = ?", (save_id,)).fetchone()
+        existing = conn.execute(
+            "SELECT created_at, data FROM saves WHERE save_id = ?", (save_id,)
+        ).fetchone()
+        if existing:
+            try:
+                existing_turn = json.loads(existing["data"]).get("turn_number", 0)
+            except (json.JSONDecodeError, TypeError):
+                existing_turn = 0
+            if existing_turn > incoming_turn:
+                # A newer save already landed; this write is stale, drop it.
+                return
         created_at = existing["created_at"] if existing else now
         conn.execute("""
             INSERT INTO saves (save_id, name, age, location, data, created_at, updated_at)
